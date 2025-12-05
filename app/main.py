@@ -36,6 +36,21 @@ BASE_DIR = Path(__file__).parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 
+def run_migrations():
+    """
+    Run Alembic migrations safely at startup
+    """
+    try:
+        from alembic.config import Config
+        from alembic import command
+
+        alembic_cfg = Config("alembic.ini")
+        command.upgrade(alembic_cfg, "head")
+        logger.info("Database migrations completed successfully")
+    except Exception as e:
+        logger.warning(f"Migration warning (may be safe to ignore): {e}")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
@@ -52,6 +67,10 @@ async def lifespan(app: FastAPI):
         logger.info("Running in PRODUCTION mode - authentication enabled")
     else:
         logger.info("Running in LOCAL mode - authentication disabled")
+
+    # Run database migrations
+    logger.info("Running database migrations...")
+    run_migrations()
 
     # Initialize database
     logger.info("Initializing database...")
@@ -190,7 +209,8 @@ async def get_system_status():
             password=password,
             api_key=api_key,
             site=config.site_id,
-            verify_ssl=config.verify_ssl
+            verify_ssl=config.verify_ssl,
+            is_unifi_os=config.is_unifi_os if not api_key else None
         )
 
         try:
