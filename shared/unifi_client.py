@@ -358,24 +358,46 @@ class UniFiClient:
 
     async def get_ap_name_by_mac(self, ap_mac: str) -> Optional[str]:
         """
-        Get the friendly name of an access point by its MAC address
+        Get the friendly name of an access point by its MAC address.
+        Also checks gateway devices with built-in radios (UDM, UDR, UDM SE).
 
         Args:
             ap_mac: AP MAC address
 
         Returns:
-            AP name if found, None otherwise
+            AP name if found, MAC address as fallback
         """
         try:
-            aps = await self.get_access_points()
             normalized_mac = ap_mac.lower().replace("-", ":").replace(".", ":")
+
+            # First check standalone APs
+            aps = await self.get_access_points()
             ap = aps.get(normalized_mac)
             if ap:
                 # Handle both dict (UniFi OS) and object (aiounifi) formats
                 if isinstance(ap, dict):
-                    return ap.get('name') or ap.get('model') or normalized_mac
+                    return ap.get('name') or get_friendly_model_name(ap.get('model', '')) or normalized_mac
                 else:
-                    return ap.name or ap.model or normalized_mac
+                    return ap.name or get_friendly_model_name(ap.model or '') or normalized_mac
+
+            # Not found in APs - check all devices (for gateways with built-in radios like UDR, UDM, UDM SE)
+            if self.is_unifi_os:
+                url = f"{self.host}/proxy/network/api/s/{self.site}/stat/device"
+            else:
+                url = f"{self.host}/api/s/{self.site}/stat/device"
+
+            async with self._session.get(url) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    devices = data.get('data', [])
+
+                    for device in devices:
+                        device_mac = device.get('mac', '').lower()
+                        if device_mac == normalized_mac:
+                            name = device.get('name')
+                            model = device.get('model', '')
+                            return name or get_friendly_model_name(model) or normalized_mac
+
             return normalized_mac
         except Exception as e:
             logger.error(f"Failed to get AP name for {ap_mac}: {e}")
