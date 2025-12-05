@@ -91,7 +91,6 @@ Access at **https://your-domain.com**
 |-------|-------------|
 | [INSTALLATION.md](docs/INSTALLATION.md) | Complete installation guide with troubleshooting |
 | [QUICKSTART.md](docs/QUICKSTART.md) | 5-minute quick start reference |
-| [MIGRATION.md](docs/MIGRATION.md) | Migrating from standalone Wi-Fi Stalker |
 
 ---
 

@@ -153,8 +153,7 @@ unifi-toolkit/
 │   └── versions/         # Migration scripts
 ├── docs/                  # Documentation
 │   ├── INSTALLATION.md   # Complete installation guide
-│   ├── QUICKSTART.md     # Quick start reference
-│   └── MIGRATION.md      # Migration from standalone wifi-stalker
+│   └── QUICKSTART.md     # Quick start reference
 ├── data/                  # Runtime data (database, logs)
 ├── setup.sh               # Interactive setup wizard
 ├── reset_password.sh      # Password reset utility
