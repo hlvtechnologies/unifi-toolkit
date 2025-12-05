@@ -4,11 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**UI Toolkit** (v1.4.0) is a comprehensive monorepo containing multiple tools for UniFi network management and monitoring. Each tool operates independently but shares common infrastructure for UniFi API access, database management, configuration, and authentication.
+**UI Toolkit** (v1.5.1) is a comprehensive monorepo containing multiple tools for UniFi network management and monitoring. Each tool operates independently but shares common infrastructure for UniFi API access, database management, configuration, and authentication.
 
 **Current Tools:**
 - **Wi-Fi Stalker v0.8.0** - Track specific client devices, monitor roaming, block/unblock devices, and maintain connection history with webhook alerts
-- **Threat Watch v0.1.0** - Monitor IDS/IPS events, view blocked threats, analyze attack patterns, and receive webhook alerts
+- **Threat Watch v0.2.0** - Monitor IDS/IPS events, view blocked threats, analyze attack patterns, and receive webhook alerts (with automatic detection of gateway IDS/IPS capability)
 
 **External Tools (linked from dashboard):**
 - **UI Product Selector** - External site at uiproductselector.com for UniFi product recommendations
@@ -268,7 +268,29 @@ Key methods:
 - `connect()` - Authenticate and connect
 - `get_clients()` - Get all active clients
 - `get_ap_name_by_mac()` - Resolve AP MAC to friendly name
+- `get_gateway_info()` - Get gateway details including IDS/IPS capability
+- `has_gateway()` - Check if site has a gateway device
 - `disconnect()` - Close connection
+
+### Gateway and IDS/IPS Detection
+
+The UniFi client includes detection for gateway devices and their IDS/IPS capability:
+
+- **Supported device types**: `ugw` (USG), `udm` (Dream Machine), `uxg` (UXG series), `ux` (UniFi Express)
+- **IDS/IPS capable models**: UDM, UDM Pro, UDM SE, UDR, UCG, UCG Max, UXG Pro, UXG Lite, USG series
+- **Non-IDS/IPS gateways**: UniFi Express (UX) - detected as a gateway but IDS/IPS features are not available
+
+The `get_gateway_info()` method returns:
+```python
+{
+    "has_gateway": True,
+    "gateway_model": "UX",
+    "gateway_name": "UniFi Express",
+    "supports_ids_ips": False
+}
+```
+
+Threat Watch uses this to show appropriate messaging when a gateway exists but doesn't support IDS/IPS.
 
 ### Encryption (shared/crypto.py)
 
