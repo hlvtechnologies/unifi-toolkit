@@ -934,7 +934,7 @@
                         threatWatchBtn.classList.add('disabled');
                         threatWatchBtn.style.pointerEvents = 'none';
                         threatWatchStatus.style.display = 'block';
-                        threatWatchStatus.innerHTML = `⚠️ <strong>IDS/IPS not available on ${gatewayName}.</strong><br>This gateway model does not include IDS/IPS capabilities. IDS/IPS is available on UDM, UCG, UXG, and USG series gateways.`;
+                        threatWatchStatus.innerHTML = `⚠️ <strong>IDS/IPS not available on ${gatewayName}.</strong><br>This gateway model does not include IDS/IPS capabilities.`;
                     } else {
                         // Gateway with IDS/IPS found - Threat Watch available
                         threatWatchCard.classList.remove('tool-unavailable');
