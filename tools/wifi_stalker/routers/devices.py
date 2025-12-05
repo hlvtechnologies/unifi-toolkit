@@ -13,7 +13,7 @@ import io
 
 from shared.database import get_db_session
 from shared.unifi_client import UniFiClient
-from tools.wifi_stalker.database import TrackedDevice, ConnectionHistory
+from tools.wifi_stalker.database import TrackedDevice, ConnectionHistory, WebhookConfig
 from tools.wifi_stalker.models import (
     DeviceCreate,
     DeviceResponse,
@@ -27,7 +27,7 @@ from tools.wifi_stalker.models import (
     SystemStatus
 )
 from tools.wifi_stalker.routers.config import get_unifi_client
-from tools.wifi_stalker.scheduler import refresh_single_device, get_last_refresh
+from tools.wifi_stalker.scheduler import refresh_single_device, get_last_refresh, trigger_webhooks
 from shared.config import get_settings
 
 router = APIRouter(prefix="/api/devices", tags=["devices"])
@@ -141,15 +141,21 @@ async def get_device_details(
         "current_signal_strength": device.current_signal_strength,
         "is_connected": device.is_connected,
         "site_id": device.site_id,
+        "is_blocked": False,  # Default, will be updated from UniFi
     }
 
-    # Get live UniFi data if device is connected
-    if device.is_connected:
+    # Always try to get blocked status and live data from UniFi
+    try:
+        await unifi_client.connect()
         try:
-            await unifi_client.connect()
-            try:
+            mac_normalized = device.mac_address.lower()
+
+            # Always check blocked status (works even for disconnected devices)
+            detail_data["is_blocked"] = await unifi_client.is_client_blocked(mac_normalized)
+
+            # Get live data if device is connected
+            if device.is_connected:
                 clients = await unifi_client.get_clients()
-                mac_normalized = device.mac_address.lower()
                 client = clients.get(mac_normalized)
 
                 if client:
@@ -163,7 +169,6 @@ async def get_device_details(
                         detail_data["uptime"] = client.get("uptime")
                         detail_data["tx_bytes"] = client.get("tx_bytes")
                         detail_data["rx_bytes"] = client.get("rx_bytes")
-                        detail_data["is_blocked"] = client.get("blocked", False)
                     else:
                         detail_data["hostname"] = getattr(client, "hostname", None)
                         detail_data["tx_rate"] = getattr(client, "tx_rate", None)
@@ -173,16 +178,15 @@ async def get_device_details(
                         detail_data["uptime"] = getattr(client, "uptime", None)
                         detail_data["tx_bytes"] = getattr(client, "tx_bytes", None)
                         detail_data["rx_bytes"] = getattr(client, "rx_bytes", None)
-                        detail_data["is_blocked"] = getattr(client, "blocked", False)
 
                     # OUI lookup for manufacturer
                     detail_data["manufacturer"] = get_manufacturer_from_mac(device.mac_address)
 
-            finally:
-                await unifi_client.disconnect()
-        except Exception as e:
-            # If we can't get live data, just return basic info
-            pass
+        finally:
+            await unifi_client.disconnect()
+    except Exception as e:
+        # If we can't get live data, just return basic info with default blocked status
+        pass
 
     return DeviceDetailResponse(**detail_data)
 
@@ -309,6 +313,13 @@ async def block_device(
     try:
         success = await unifi_client.block_client(device.mac_address)
         if success:
+            # Update blocked status in database
+            device.is_blocked = True
+            await db.commit()
+
+            # Trigger blocked webhook
+            await trigger_webhooks(db, 'blocked', device)
+
             return SuccessResponse(
                 success=True,
                 message=f"Device {device.mac_address} blocked successfully"
@@ -342,6 +353,13 @@ async def unblock_device(
     try:
         success = await unifi_client.unblock_client(device.mac_address)
         if success:
+            # Update blocked status in database
+            device.is_blocked = False
+            await db.commit()
+
+            # Trigger unblocked webhook
+            await trigger_webhooks(db, 'unblocked', device)
+
             return SuccessResponse(
                 success=True,
                 message=f"Device {device.mac_address} unblocked successfully"

@@ -453,6 +453,40 @@ class UniFiClient:
             logger.error(f"Error unblocking client {mac_address}: {e}")
             return False
 
+    async def is_client_blocked(self, mac_address: str) -> bool:
+        """
+        Check if a client is blocked in UniFi
+
+        Args:
+            mac_address: MAC address of client to check
+
+        Returns:
+            True if blocked, False otherwise
+        """
+        if not self._session:
+            raise RuntimeError("Not connected to UniFi controller. Call connect() first.")
+
+        try:
+            if self.is_unifi_os:
+                url = f"{self.host}/proxy/network/api/s/{self.site}/rest/user"
+            else:
+                url = f"{self.host}/api/s/{self.site}/rest/user"
+
+            async with self._session.get(url) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    users = data.get('data', [])
+                    user = next((u for u in users if u.get('mac', '').lower() == mac_address.lower()), None)
+
+                    if user:
+                        return user.get('blocked', False)
+
+            return False
+
+        except Exception as e:
+            logger.error(f"Error checking blocked status for {mac_address}: {e}")
+            return False
+
     async def set_client_name(self, mac_address: str, name: str) -> bool:
         """
         Set friendly name for a client in UniFi

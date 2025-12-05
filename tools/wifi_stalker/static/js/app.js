@@ -51,6 +51,8 @@ function dashboard() {
             event_device_connected: true,
             event_device_disconnected: true,
             event_device_roamed: true,
+            event_device_blocked: true,
+            event_device_unblocked: true,
             enabled: true
         },
 
@@ -493,8 +495,9 @@ function dashboard() {
 
                 if (response.ok) {
                     this.showToast('Device unblocked successfully', 'success');
-                    // Refresh device details
+                    // Refresh device details and device list
                     await this.viewDeviceDetails(deviceId);
+                    await this.loadDevices();
                 } else {
                     const error = await response.json();
                     this.showToast(error.detail || 'Failed to unblock device', 'error');
@@ -763,6 +766,8 @@ function dashboard() {
                 event_device_connected: webhook.event_device_connected,
                 event_device_disconnected: webhook.event_device_disconnected,
                 event_device_roamed: webhook.event_device_roamed,
+                event_device_blocked: webhook.event_device_blocked,
+                event_device_unblocked: webhook.event_device_unblocked,
                 enabled: webhook.enabled
             };
             this.showEditWebhook = true;
@@ -826,6 +831,8 @@ function dashboard() {
                 event_device_connected: true,
                 event_device_disconnected: true,
                 event_device_roamed: true,
+                event_device_blocked: true,
+                event_device_unblocked: true,
                 enabled: true
             };
         }

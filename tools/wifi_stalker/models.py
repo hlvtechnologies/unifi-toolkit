@@ -87,6 +87,7 @@ class DeviceResponse(BaseModel):
     current_ip_address: Optional[str]
     current_signal_strength: Optional[int]
     is_connected: bool
+    is_blocked: bool = False
     site_id: str
 
     @field_serializer('added_at', 'last_seen')
@@ -293,6 +294,8 @@ class WebhookCreate(BaseModel):
     event_device_connected: bool = True
     event_device_disconnected: bool = True
     event_device_roamed: bool = True
+    event_device_blocked: bool = True
+    event_device_unblocked: bool = True
     enabled: bool = True
 
 
@@ -305,6 +308,8 @@ class WebhookUpdate(BaseModel):
     event_device_connected: Optional[bool] = None
     event_device_disconnected: Optional[bool] = None
     event_device_roamed: Optional[bool] = None
+    event_device_blocked: Optional[bool] = None
+    event_device_unblocked: Optional[bool] = None
     enabled: Optional[bool] = None
 
 
@@ -319,6 +324,8 @@ class WebhookResponse(BaseModel):
     event_device_connected: bool
     event_device_disconnected: bool
     event_device_roamed: bool
+    event_device_blocked: bool
+    event_device_unblocked: bool
     enabled: bool
     created_at: datetime
     last_triggered: Optional[datetime] = None

@@ -24,7 +24,7 @@ async def deliver_webhook(
     Args:
         webhook_url: The webhook URL to send to
         webhook_type: Type of webhook ('slack', 'discord', 'n8n')
-        event_type: Type of event ('connected', 'disconnected', 'roamed')
+        event_type: Type of event ('connected', 'disconnected', 'roamed', 'blocked', 'unblocked')
         device_name: Friendly name of the device
         device_mac: MAC address of the device
         ap_name: Name of the AP (for connected/roamed events)
@@ -68,7 +68,7 @@ def format_slack_message(
     Format a message for Slack webhook
 
     Args:
-        event_type: Type of event ('connected', 'disconnected', 'roamed')
+        event_type: Type of event ('connected', 'disconnected', 'roamed', 'blocked', 'unblocked')
         device_name: Friendly name of the device
         device_mac: MAC address of the device
         ap_name: Name of the AP
@@ -88,6 +88,16 @@ def format_slack_message(
         color = 'danger'
         title = f"{device_name} Disconnected"
         text = "Device went offline"
+    elif event_type == 'blocked':
+        emoji = ':no_entry:'
+        color = '#FF5722'
+        title = f"{device_name} Blocked"
+        text = "Device has been blocked from the network"
+    elif event_type == 'unblocked':
+        emoji = ':unlock:'
+        color = '#8BC34A'
+        title = f"{device_name} Unblocked"
+        text = "Device has been unblocked and can reconnect"
     else:  # roamed
         emoji = ':arrows_counterclockwise:'
         color = '#2196F3'
@@ -147,7 +157,7 @@ def format_discord_message(
     Format a message for Discord webhook
 
     Args:
-        event_type: Type of event ('connected', 'disconnected', 'roamed')
+        event_type: Type of event ('connected', 'disconnected', 'roamed', 'blocked', 'unblocked')
         device_name: Friendly name of the device
         device_mac: MAC address of the device
         ap_name: Name of the AP
@@ -165,6 +175,14 @@ def format_discord_message(
         color = 0xF44336  # Red
         title = "❌ Device Disconnected"
         description = f"**{device_name}** went offline"
+    elif event_type == 'blocked':
+        color = 0xFF5722  # Deep Orange
+        title = "🚫 Device Blocked"
+        description = f"**{device_name}** has been blocked from the network"
+    elif event_type == 'unblocked':
+        color = 0x8BC34A  # Light Green
+        title = "🔓 Device Unblocked"
+        description = f"**{device_name}** has been unblocked and can reconnect"
     else:  # roamed
         color = 0x2196F3  # Blue
         title = "🔄 Device Roamed"
@@ -220,7 +238,7 @@ def format_generic_message(
     Format a message for generic/n8n webhook
 
     Args:
-        event_type: Type of event ('connected', 'disconnected', 'roamed')
+        event_type: Type of event ('connected', 'disconnected', 'roamed', 'blocked', 'unblocked')
         device_name: Friendly name of the device
         device_mac: MAC address of the device
         ap_name: Name of the AP

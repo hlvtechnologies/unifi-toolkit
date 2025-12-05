@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **UI Toolkit** (v1.4.0) is a comprehensive monorepo containing multiple tools for UniFi network management and monitoring. Each tool operates independently but shares common infrastructure for UniFi API access, database management, configuration, and authentication.
 
 **Current Tools:**
-- **Wi-Fi Stalker v0.7.0** - Track specific client devices, monitor roaming, and maintain connection history
+- **Wi-Fi Stalker v0.8.0** - Track specific client devices, monitor roaming, block/unblock devices, and maintain connection history with webhook alerts
 - **Threat Watch v0.1.0** - Monitor IDS/IPS events, view blocked threats, analyze attack patterns, and receive webhook alerts
 
 **External Tools (linked from dashboard):**

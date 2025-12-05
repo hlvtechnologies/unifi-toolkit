@@ -23,6 +23,7 @@ class TrackedDevice(Base):
     current_ip_address = Column(String, nullable=True)
     current_signal_strength = Column(Integer, nullable=True)
     is_connected = Column(Boolean, default=False, nullable=False)
+    is_blocked = Column(Boolean, default=False, nullable=False)
     site_id = Column(String, nullable=False)
 
     # Relationship to connection history
@@ -70,6 +71,8 @@ class WebhookConfig(Base):
     event_device_connected = Column(Boolean, default=True, nullable=False)
     event_device_disconnected = Column(Boolean, default=True, nullable=False)
     event_device_roamed = Column(Boolean, default=True, nullable=False)
+    event_device_blocked = Column(Boolean, default=True, nullable=False)
+    event_device_unblocked = Column(Boolean, default=True, nullable=False)
 
     enabled = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)

@@ -160,6 +160,7 @@ def _device_to_dict(device: TrackedDevice) -> dict:
         'friendly_name': device.friendly_name,
         'mac_address': device.mac_address,
         'is_connected': device.is_connected,
+        'is_blocked': device.is_blocked,
         'current_ap_name': device.current_ap_name,
         'current_ap_mac': device.current_ap_mac,
         'current_ip_address': device.current_ip_address,
@@ -179,7 +180,7 @@ async def trigger_webhooks(
 
     Args:
         session: Database session
-        event_type: Type of event ('connected', 'disconnected', 'roamed')
+        event_type: Type of event ('connected', 'disconnected', 'roamed', 'blocked', 'unblocked')
         device: TrackedDevice that triggered the event
     """
     # Get all enabled webhooks
@@ -200,6 +201,10 @@ async def trigger_webhooks(
         elif event_type == 'disconnected' and webhook.event_device_disconnected:
             should_trigger = True
         elif event_type == 'roamed' and webhook.event_device_roamed:
+            should_trigger = True
+        elif event_type == 'blocked' and webhook.event_device_blocked:
+            should_trigger = True
+        elif event_type == 'unblocked' and webhook.event_device_unblocked:
             should_trigger = True
 
         if should_trigger:
@@ -327,6 +332,20 @@ async def process_device(
 
             # Trigger disconnection webhooks
             await trigger_webhooks(session, 'disconnected', device)
+
+    # Always check blocked status (works for both online and offline devices)
+    try:
+        is_blocked = await unifi_client.is_client_blocked(mac)
+        if device.is_blocked != is_blocked:
+            logger.info(f"Device {device.mac_address} blocked status changed to {is_blocked}")
+            device.is_blocked = is_blocked
+            # Broadcast update via WebSocket
+            await ws_manager.broadcast_device_update(_device_to_dict(device))
+            # Trigger blocked/unblocked webhooks
+            event_type = 'blocked' if is_blocked else 'unblocked'
+            await trigger_webhooks(session, event_type, device)
+    except Exception as e:
+        logger.debug(f"Could not check blocked status for {device.mac_address}: {e}")
 
 
 async def close_connection_history(session: AsyncSession, device: TrackedDevice):

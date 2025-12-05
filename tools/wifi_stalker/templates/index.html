@@ -122,8 +122,8 @@
                                 @click="viewDeviceDetails(device.id)">
                                 <td>
                                     <span class="status-indicator"
-                                          :class="device.is_connected ? 'online' : 'offline'">
-                                        <span x-text="device.is_connected ? '🟢' : '🔴'"></span>
+                                          :class="device.is_blocked ? 'blocked' : (device.is_connected ? 'online' : 'offline')">
+                                        <span x-text="device.is_blocked ? '🚫' : (device.is_connected ? '🟢' : '🔴')"></span>
                                     </span>
                                 </td>
                                 <td>
@@ -238,6 +238,8 @@
                                             <span x-show="webhook.event_device_connected">Connected</span>
                                             <span x-show="webhook.event_device_disconnected">Disconnected</span>
                                             <span x-show="webhook.event_device_roamed">Roamed</span>
+                                            <span x-show="webhook.event_device_blocked">Blocked</span>
+                                            <span x-show="webhook.event_device_unblocked">Unblocked</span>
                                         </div>
                                     </div>
                                     <div class="webhook-item-actions">
@@ -305,6 +307,14 @@
                                 <label class="checkbox-label">
                                     <input type="checkbox" x-model="webhookForm.event_device_roamed">
                                     Device Roamed
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" x-model="webhookForm.event_device_blocked">
+                                    Device Blocked
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" x-model="webhookForm.event_device_unblocked">
+                                    Device Unblocked
                                 </label>
                             </div>
                         </div>
@@ -516,7 +526,7 @@
                         </button>
                         <button x-show="deviceDetails?.is_blocked"
                                 @click="unblockDevice(deviceDetails.id)"
-                                class="btn btn-primary">
+                                class="btn btn-success">
                             ✅ Unblock Device
                         </button>
                     </div>

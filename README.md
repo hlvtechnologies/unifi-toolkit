@@ -20,7 +20,9 @@ Track specific Wi-Fi client devices through your UniFi infrastructure.
 - Device tracking by MAC address
 - Roaming detection between access points
 - Connection history with timestamps
-- Webhook alerts (Slack, Discord, n8n)
+- Block/unblock devices directly from the UI
+- Blocked device indicator in device list
+- Webhook alerts (Slack, Discord, n8n) for connect, disconnect, roam, block, and unblock events
 
 ### Threat Watch
 Monitor IDS/IPS security events from your UniFi gateway.

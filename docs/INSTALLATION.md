@@ -463,6 +463,22 @@ docker compose up -d
 
 ### Permission Errors
 
+**"unable to open database file" in Docker:**
+
+This happens when the Docker container can't write to the data directory. Fix it by setting proper permissions:
+
+```bash
+# Create data directory with write permissions for Docker
+mkdir -p data
+chmod 777 data
+
+# Restart the container
+docker compose down
+docker compose up -d
+```
+
+**General permission errors:**
+
 ```bash
 # Fix ownership
 sudo chown -R $USER:$USER /opt/unifi-toolkit
