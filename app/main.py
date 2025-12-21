@@ -202,11 +202,13 @@ async def health_check():
 @app.get("/api/system-status")
 async def get_system_status():
     """
-    Get system status including gateway info, health, and stats
+    Get system status including gateway info, health, stats, and IPS settings.
+    Also caches gateway info and IPS settings for use by other endpoints.
     """
     from shared.unifi_client import UniFiClient
     from shared.crypto import decrypt_password, decrypt_api_key
     from shared.models.unifi_config import UniFiConfig
+    from shared import cache
 
     db = get_database()
 
@@ -246,6 +248,7 @@ async def get_system_status():
         try:
             connected = await client.connect()
             if not connected:
+                cache.invalidate_all()
                 return {
                     "configured": True,
                     "connected": False,
@@ -256,11 +259,31 @@ async def get_system_status():
             system_info = await client.get_system_info()
             health = await client.get_health()
 
+            # Also get gateway info and IPS settings for caching
+            # (these will be reused by gateway-check endpoint)
+            gateway_info = await client.get_gateway_info()
+            ips_settings = None
+
+            # Only fetch IPS settings if we have a gateway that supports it
+            # and we're on UniFi OS (legacy controllers don't expose IPS API)
+            if gateway_info.get("has_gateway") and gateway_info.get("supports_ids_ips") and client.is_unifi_os:
+                ips_settings = await client.get_ips_settings()
+
+            # Cache the results
+            cache.set_gateway_info({
+                **gateway_info,
+                "is_unifi_os": client.is_unifi_os
+            })
+            if ips_settings:
+                cache.set_ips_settings(ips_settings)
+
             return {
                 "configured": True,
                 "connected": True,
                 "system": system_info,
-                "health": health
+                "health": health,
+                "gateway": gateway_info,
+                "ips_settings": ips_settings
             }
 
         finally:
@@ -268,6 +291,7 @@ async def get_system_status():
 
     except Exception as e:
         logger.error(f"Failed to get system status: {e}")
+        cache.invalidate_all()
         return {
             "configured": True,
             "connected": False,

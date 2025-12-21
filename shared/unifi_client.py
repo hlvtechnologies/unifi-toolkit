@@ -14,33 +14,63 @@ from urllib.parse import urlparse
 logger = logging.getLogger(__name__)
 
 # Gateway models that support IDS/IPS
-# UniFi Express (UX) does NOT support IDS/IPS
+# UniFi Express (UX, UXBSDM) does NOT support IDS/IPS
 IDS_IPS_SUPPORTED_MODELS = {
-    "UDMPRO", "UDMPROMAX", "UDM", "UDMSE", "UDR", "UDW",
-    "UXG", "UXGPRO", "UXGLITE",
-    "UCG", "UCGMAX", "UDMA6A8",  # UCG Fiber
-    "USG", "USG3P", "USG4P", "USGP4",
+    # Dream Machine series
+    "UDM",          # UDM (base)
+    "UDMPRO",       # UDM Pro
+    "UDMPROMAX",    # UDM Pro Max
+    "UDMPROSE",     # UDM SE (alternate code)
+    "UDMSE",        # UDM SE
+    "UDR",          # UDR (Dream Router)
+    "UDW",          # UDW (Dream Wall)
+    # UXG series (Next-Gen Gateway)
+    "UXG",          # UXG Lite (model code is just "UXG" not "UXGLITE")
+    "UXGPRO",       # UXG Pro
+    # UCG series (Cloud Gateway)
+    "UCG",          # UCG
+    "UCGMAX",       # UCG Max
+    "UDMA6A8",      # UCG Fiber
+    "UDRULT",       # UCG Ultra
+    # USG series (Security Gateway - legacy)
+    "USG",          # USG (base)
+    "USG3P",        # USG 3P
+    "UGW3",         # USG 3P (alternate code)
+    "USG4P",        # USG Pro 4
+    "UGW4",         # USG Pro 4 (alternate code)
+    "USGP4",        # USG Pro 4 (another alternate)
+    "UGWHD4",       # USG HD
+    "UGWXG",        # USG XG 8
 }
 
 # UniFi device model code to friendly name mapping
 UNIFI_MODEL_NAMES = {
     # Gateways / Dream Machines
-    "UDMA6A8": "UCG Fiber",
+    "UDM": "UDM",
     "UDMPRO": "UDM Pro",
     "UDMPROMAX": "UDM Pro Max",
-    "UDM": "UDM",
+    "UDMPROSE": "UDM SE",
     "UDMSE": "UDM SE",
     "UDR": "UDR",
     "UDW": "UDW",
-    "UXG": "UXG Pro",
+    # UXG series - Note: "UXG" is the model code for UXG Lite
+    "UXG": "UXG Lite",
     "UXGPRO": "UXG Pro",
-    "UXGLITE": "UXG Lite",
+    # UCG series
     "UCG": "UCG",
     "UCGMAX": "UCG Max",
+    "UDMA6A8": "UCG Fiber",
+    "UDRULT": "UCG Ultra",
+    # USG series (legacy)
     "USG": "USG",
     "USG3P": "USG 3P",
+    "UGW3": "USG 3P",
     "USG4P": "USG Pro 4",
+    "UGW4": "USG Pro 4",
     "USGP4": "USG Pro 4",
+    "UGWHD4": "USG HD",
+    "UGWXG": "USG XG 8",
+    # UniFi Express (no IDS/IPS)
     "UX": "UniFi Express",
     "UXBSDM": "UniFi Express",
     # Access Points
@@ -1202,6 +1232,68 @@ class UniFiClient:
 
         except Exception as e:
             logger.error(f"Failed to get gateway info: {e}")
+
+        return result
+
+    async def get_ips_settings(self) -> Dict:
+        """
+        Get IDS/IPS settings from the site configuration.
+
+        Returns:
+            Dictionary with:
+            - ips_mode: Current mode ("disabled", "ids", "ips", "ipsInline")
+            - ips_enabled: True if IDS or IPS is enabled
+            - honeypot_enabled: True if honeypot is enabled
+            - dns_filtering: True if DNS filtering is enabled
+            - ad_blocking_enabled: True if ad blocking is enabled
+            - error: Error message if failed to retrieve settings
+        """
+        if not self._session:
+            raise RuntimeError("Not connected to UniFi controller. Call connect() first.")
+
+        result = {
+            "ips_mode": "unknown",
+            "ips_enabled": False,
+            "honeypot_enabled": False,
+            "dns_filtering": False,
+            "ad_blocking_enabled": False,
+            "error": None
+        }
+
+        try:
+            if self.is_unifi_os:
+                url = f"{self.host}/proxy/network/api/s/{self.site}/rest/setting"
+            else:
+                url = f"{self.host}/api/s/{self.site}/rest/setting"
+
+            async with self._session.get(url) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    settings_list = data.get('data', [])
+
+                    # Find the IPS settings object (key = "ips")
+                    for setting in settings_list:
+                        if setting.get('key') == 'ips':
+                            ips_mode = setting.get('ips_mode', 'disabled')
+                            result["ips_mode"] = ips_mode
+                            result["ips_enabled"] = ips_mode in ('ids', 'ips', 'ipsInline')
+                            result["honeypot_enabled"] = setting.get('honeypot_enabled', False)
+                            result["dns_filtering"] = setting.get('dns_filtering', False)
+                            result["ad_blocking_enabled"] = setting.get('ad_blocking_enabled', False)
+
+                            logger.debug(f"IPS settings: mode={ips_mode}, enabled={result['ips_enabled']}")
+                            return result
+
+                    # No IPS settings found - might be disabled or not available
+                    logger.debug("No IPS settings found in site configuration")
+                    result["ips_mode"] = "disabled"
+                else:
+                    logger.warning(f"Failed to get site settings: {resp.status}")
+                    result["error"] = f"Failed to retrieve settings (HTTP {resp.status})"
+
+        except Exception as e:
+            logger.error(f"Failed to get IPS settings: {e}")
+            result["error"] = str(e)
 
         return result
 

@@ -73,6 +73,9 @@ class GatewayCheckResponse(BaseModel):
     gateway_name: Optional[str] = None
     configured: bool
     error: Optional[str] = None
+    # IPS settings (when available)
+    ips_mode: Optional[str] = None  # "disabled", "ids", "ips", "ipsInline"
+    ips_enabled: Optional[bool] = None
 
 
 @router.post("/unifi", response_model=SuccessResponse)
@@ -84,12 +87,17 @@ async def save_unifi_config(
     Save UniFi controller configuration
     Supports both legacy (username/password) and UniFi OS (API key) authentication
     """
+    from shared import cache
+
     # Validate that either password or API key is provided
     if not config.password and not config.api_key:
         raise HTTPException(
             status_code=400,
             detail="Either password or api_key must be provided"
         )
+
+    # Invalidate cache since config is changing
+    cache.invalidate_all()
 
     # Encrypt credentials
     encrypted_password = None
@@ -256,9 +264,50 @@ async def check_gateway_availability(
     Check if a UniFi Gateway is present on the site.
     This is required for Threat Watch (IDS/IPS features).
 
+    This endpoint uses cached data from system-status when available
+    to avoid making multiple concurrent connections to the controller.
+
     Note: Legacy controllers (Cloud Key, self-hosted) do NOT expose IDS/IPS
     API endpoints, regardless of what gateway hardware is present.
     """
+    from shared import cache
+    import logging
+
+    logger = logging.getLogger(__name__)
+
+    # First, check if we have cached gateway info
+    cached_info = cache.get_gateway_info()
+    cached_ips = cache.get_ips_settings()
+
+    if cached_info is not None:
+        logger.debug("Using cached gateway info for gateway-check")
+        is_legacy = not cached_info.get("is_unifi_os", True)
+
+        if is_legacy:
+            gateway_name = cached_info.get("gateway_name", "Unknown")
+            return GatewayCheckResponse(
+                has_gateway=cached_info.get("has_gateway", False),
+                supports_ids_ips=False,
+                gateway_name=f"{gateway_name} (Legacy Controller)",
+                configured=True
+            )
+
+        # Include IPS settings if available
+        ips_mode = cached_ips.get("ips_mode") if cached_ips else None
+        ips_enabled = cached_ips.get("ips_enabled") if cached_ips else None
+
+        return GatewayCheckResponse(
+            has_gateway=cached_info.get("has_gateway", False),
+            supports_ids_ips=cached_info.get("supports_ids_ips", False),
+            gateway_name=cached_info.get("gateway_name"),
+            configured=True,
+            ips_mode=ips_mode,
+            ips_enabled=ips_enabled
+        )
+
+    # No cache - need to check config and possibly connect
+    logger.debug("No cached gateway info, checking config")
+
     # Get config from database
     result = await db.execute(select(UniFiConfig).where(UniFiConfig.id == 1))
     config = result.scalar_one_or_none()
@@ -311,6 +360,12 @@ async def check_gateway_availability(
         # Get gateway info including IDS/IPS support
         gateway_info = await client.get_gateway_info()
 
+        # Cache the result for future requests
+        cache.set_gateway_info({
+            **gateway_info,
+            "is_unifi_os": client.is_unifi_os
+        })
+
         # Check if this is a legacy controller (detected during connection)
         # Legacy controllers don't expose IDS/IPS API regardless of gateway hardware
         is_legacy_controller = not client.is_unifi_os
@@ -324,11 +379,23 @@ async def check_gateway_availability(
                 configured=True
             )
 
+        # Get IPS settings if gateway supports IDS/IPS
+        ips_mode = None
+        ips_enabled = None
+        if gateway_info.get("has_gateway") and gateway_info.get("supports_ids_ips"):
+            ips_settings = await client.get_ips_settings()
+            if ips_settings:
+                cache.set_ips_settings(ips_settings)
+                ips_mode = ips_settings.get("ips_mode")
+                ips_enabled = ips_settings.get("ips_enabled")
+
         return GatewayCheckResponse(
             has_gateway=gateway_info.get("has_gateway", False),
             supports_ids_ips=gateway_info.get("supports_ids_ips", False),
             gateway_name=gateway_info.get("gateway_name"),
-            configured=True
+            configured=True,
+            ips_mode=ips_mode,
+            ips_enabled=ips_enabled
         )
 
     except Exception as e:

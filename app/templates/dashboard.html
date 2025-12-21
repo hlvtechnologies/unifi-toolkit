@@ -965,7 +965,24 @@
                         threatWatchCard.classList.remove('tool-unavailable');
                         threatWatchBtn.classList.remove('disabled');
                         threatWatchBtn.style.pointerEvents = 'auto';
-                        threatWatchStatus.style.display = 'none';
+
+                        // Show IPS status if available
+                        if (data.ips_enabled === false) {
+                            // IDS/IPS is disabled
+                            threatWatchStatus.style.display = 'block';
+                            threatWatchStatus.innerHTML = `ℹ️ <strong>IDS/IPS is disabled.</strong> Enable it in UniFi Settings → Security → Internet Threat Management.`;
+                            threatWatchStatus.style.color = 'var(--text-muted)';
+                        } else if (data.ips_mode) {
+                            // Show current mode
+                            threatWatchStatus.style.display = 'block';
+                            const modeLabel = data.ips_mode === 'ids' ? 'IDS (Detect Only)' :
+                                             data.ips_mode === 'ips' || data.ips_mode === 'ipsInline' ? 'IPS (Detect & Block)' :
+                                             data.ips_mode.toUpperCase();
+                            threatWatchStatus.innerHTML = `🛡️ ${modeLabel} active on ${data.gateway_name}`;
+                            threatWatchStatus.style.color = 'var(--success-color, #28a745)';
+                        } else {
+                            threatWatchStatus.style.display = 'none';
+                        }
                     }
                 } catch (error) {
                     console.error('Failed to check gateway availability:', error);

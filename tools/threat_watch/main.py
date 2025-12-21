@@ -62,65 +62,69 @@ def create_app() -> FastAPI:
         db: AsyncSession = Depends(get_db_session)
     ):
         """Serve the Threat Watch dashboard"""
-        # Check gateway and IDS/IPS capability
+        from shared import cache
+
+        # Check gateway and IDS/IPS capability using cached data
+        # This avoids making a separate connection - the main dashboard's
+        # system-status call already fetches and caches this info
         supports_ids_ips = False
         gateway_info = None
+        ips_settings = None
         gateway_error = None
 
         try:
-            # Get UniFi config
-            result = await db.execute(select(UniFiConfig).where(UniFiConfig.id == 1))
-            config = result.scalar_one_or_none()
+            # First try to use cached gateway info
+            cached_gateway = cache.get_gateway_info()
+            cached_ips = cache.get_ips_settings()
 
-            if config:
-                # Decrypt credentials
-                password = None
-                api_key = None
-                if config.password_encrypted:
-                    password = decrypt_password(config.password_encrypted)
-                if config.api_key_encrypted:
-                    api_key = decrypt_api_key(config.api_key_encrypted)
+            if cached_gateway is not None:
+                logger.debug("Using cached gateway info for Threat Watch dashboard")
+                gateway_info = cached_gateway
+                ips_settings = cached_ips
 
-                # Create client and check for gateway
-                client = UniFiClient(
-                    host=config.controller_url,
-                    username=config.username,
-                    password=password,
-                    api_key=api_key,
-                    site=config.site_id,
-                    verify_ssl=config.verify_ssl
-                )
+                # Check if this is a legacy controller
+                is_legacy = not cached_gateway.get("is_unifi_os", True)
 
-                try:
-                    connected = await client.connect()
-                    if connected:
-                        gateway_info = await client.get_gateway_info()
-                        supports_ids_ips = gateway_info.get("supports_ids_ips", False)
+                if not cached_gateway.get("has_gateway"):
+                    gateway_error = "No UniFi Gateway found on this site"
+                elif is_legacy:
+                    gateway_name = cached_gateway.get("gateway_name", "Unknown")
+                    gateway_error = f"IDS/IPS API not available on legacy controllers ({gateway_name})"
+                elif not cached_gateway.get("supports_ids_ips"):
+                    gateway_name = cached_gateway.get("gateway_name", "Unknown")
+                    gateway_error = f"Your gateway ({gateway_name}) does not support IDS/IPS"
+                else:
+                    supports_ids_ips = True
 
-                        if not gateway_info.get("has_gateway"):
-                            gateway_error = "No UniFi Gateway found on this site"
-                        elif not supports_ids_ips:
-                            gateway_name = gateway_info.get("gateway_name", "Unknown")
-                            gateway_error = f"Your gateway ({gateway_name}) does not support IDS/IPS"
-                    else:
-                        gateway_error = "Failed to connect to UniFi controller"
-                except Exception as e:
-                    logger.error(f"Error checking gateway: {e}")
-                    gateway_error = str(e)
-                finally:
-                    await client.disconnect()
+                    # Check if IDS/IPS is actually enabled
+                    if ips_settings and not ips_settings.get("ips_enabled"):
+                        # Gateway supports it, but it's disabled
+                        gateway_error = "ids_disabled"  # Special flag for UI
+
             else:
-                gateway_error = "UniFi controller not configured"
+                # No cache - check if config exists at least
+                result = await db.execute(select(UniFiConfig).where(UniFiConfig.id == 1))
+                config = result.scalar_one_or_none()
+
+                if not config:
+                    gateway_error = "UniFi controller not configured"
+                else:
+                    # Config exists but no cache - dashboard hasn't loaded yet
+                    # Let the UI handle this gracefully
+                    gateway_error = "Loading gateway information..."
+
         except Exception as e:
-            logger.error(f"Error loading UniFi config: {e}")
+            logger.error(f"Error loading gateway info: {e}")
             gateway_error = "Configuration error"
 
         return templates.TemplateResponse(
             "index.html",
             {
                 "request": request,
+                "version": __version__,
                 "supports_ids_ips": supports_ids_ips,
                 "gateway_info": gateway_info,
+                "ips_settings": ips_settings,
                 "gateway_error": gateway_error
             }
         )

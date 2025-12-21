@@ -52,6 +52,9 @@
                 <h3>IDS/IPS Not Available</h3>
                 <p><strong>{{ gateway_error }}</strong></p>
                 <p>Threat Watch monitors IDS/IPS (Intrusion Detection/Prevention System) events. While your site has a gateway device, this model does not include IDS/IPS capabilities.</p>
+                {% elif gateway_error == "Loading gateway information..." %}
+                <h3>Loading...</h3>
+                <p>Checking gateway configuration. Please wait or refresh the page.</p>
                 {% else %}
                 <h3>UniFi Gateway Required</h3>
                 <p><strong>{{ gateway_error }}</strong></p>
@@ -62,6 +65,41 @@
                     <a href="/" class="btn btn-primary">← Back to Dashboard</a>
                 </div>
             </div>
+        </div>
+        {% endif %}
+
+        <!-- IDS/IPS Disabled Warning -->
+        {% if supports_ids_ips and gateway_error == "ids_disabled" %}
+        <div class="gateway-warning" style="background-color: var(--warning-bg, #fff3cd); border-color: var(--warning-border, #ffc107);">
+            <div class="warning-icon">ℹ️</div>
+            <div class="warning-content">
+                <h3>IDS/IPS is Disabled</h3>
+                <p>Your gateway ({{ gateway_info.gateway_name }}) supports IDS/IPS, but it is currently <strong>disabled</strong> in your UniFi settings.</p>
+                <p>To enable threat detection:</p>
+                <ol style="margin: 0.5rem 0; padding-left: 1.5rem;">
+                    <li>Open your UniFi Network dashboard</li>
+                    <li>Go to <strong>Settings → Security → Internet Threat Management</strong></li>
+                    <li>Enable <strong>Intrusion Detection</strong> (IDS) or <strong>Intrusion Prevention</strong> (IPS)</li>
+                </ol>
+                <p style="margin-top: 0.5rem; font-size: 0.9rem; color: var(--text-muted);">
+                    <strong>IDS</strong> = Detect and alert only | <strong>IPS</strong> = Detect and block threats
+                </p>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- IDS/IPS Status Badge (when enabled) -->
+        {% if supports_ids_ips and ips_settings and ips_settings.ips_enabled %}
+        <div class="ips-status-badge" style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; padding: 0.5rem 1rem; background: var(--success-bg, #d4edda); border: 1px solid var(--success-border, #28a745); border-radius: 6px; font-size: 0.9rem;">
+            <span style="font-size: 1.2rem;">🛡️</span>
+            <span>
+                <strong>{{ ips_settings.ips_mode|upper }}</strong> Mode Active
+                {% if ips_settings.ips_mode == "ids" %}
+                    (Detecting threats)
+                {% elif ips_settings.ips_mode == "ips" or ips_settings.ips_mode == "ipsInline" %}
+                    (Detecting &amp; blocking threats)
+                {% endif %}
+            </span>
         </div>
         {% endif %}
 
@@ -552,7 +590,7 @@
 
         <!-- Footer -->
         <footer class="app-footer">
-            <p><a href="https://github.com/Crosstalk-Solutions/unifi-toolkit" target="_blank">UI Toolkit - Threat Watch</a> v0.1.0 | by <a href="https://www.crosstalksolutions.com" target="_blank">Crosstalk Solutions</a></p>
+            <p><a href="https://github.com/Crosstalk-Solutions/unifi-toolkit" target="_blank">UI Toolkit - Threat Watch</a> v{{ version }} | by <a href="https://www.crosstalksolutions.com" target="_blank">Crosstalk Solutions</a></p>
             <p class="footer-disclaimer">Not affiliated with Ubiquiti Inc. UniFi is a trademark of Ubiquiti Inc.</p>
         </footer>
     </div>
