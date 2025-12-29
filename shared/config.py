@@ -35,6 +35,9 @@ class ToolkitSettings(BaseSettings):
     # Tool-specific settings
     stalker_refresh_interval: int = 60
 
+    # Server settings
+    app_port: int = 8000
+
     class Config:
         env_file = ".env"
         extra = "ignore"

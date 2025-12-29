@@ -94,10 +94,10 @@ if __name__ == "__main__":
     if deployment_type == "PRODUCTION":
         print("Access via your configured domain with HTTPS")
     else:
-        print("Access the dashboard at: http://localhost:8000")
-        print("Wi-Fi Stalker at: http://localhost:8000/stalker/")
-        print("Threat Watch at: http://localhost:8000/threats/")
-        print("Network Pulse at: http://localhost:8000/pulse/")
+        print(f"Access the dashboard at: http://localhost:{settings.app_port}")
+        print(f"Wi-Fi Stalker at: http://localhost:{settings.app_port}/stalker/")
+        print(f"Threat Watch at: http://localhost:{settings.app_port}/threats/")
+        print(f"Network Pulse at: http://localhost:{settings.app_port}/pulse/")
     print()
     print("Press Ctrl+C to stop the server")
     print("=" * 70)
@@ -110,7 +110,7 @@ if __name__ == "__main__":
     uvicorn.run(
         "app.main:app",
         host="0.0.0.0",
-        port=8000,
+        port=settings.app_port,
         reload=False,  # Set to True for development
         log_level=log_level,
         access_log=True
