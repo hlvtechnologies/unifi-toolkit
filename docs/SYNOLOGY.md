@@ -2,13 +2,14 @@
 
 Step-by-step instructions for running UI Toolkit on Synology NAS using Container Manager.
 
+> **Important:** Synology Container Manager's GUI cannot browse or download images from GitHub Container Registry (ghcr.io) due to API limitations. This guide provides two working methods: SSH commands or Container Manager Projects.
+
 ---
 
 ## Prerequisites
 
 - **Synology NAS** with Container Manager installed (DSM 7.2+)
-  - Container Manager is the new name for Docker on Synology
-  - Install from Package Center if not already installed
+- **SSH access** enabled on your Synology (Control Panel → Terminal & SNMP → Enable SSH)
 - **Supported architectures**: Intel (x86_64) or ARM64-based Synology models
 
 ---
@@ -32,7 +33,7 @@ Your structure should look like:
 
 You need to create a `.env` file with your settings.
 
-### Option A: Using File Station (easier)
+### Option A: Using File Station
 
 1. On your computer, create a text file called `env.txt` with this content:
 
@@ -44,17 +45,17 @@ LOG_LEVEL=INFO
 
 2. Generate an encryption key using one of these methods:
 
-   **Option 1: Mac/Linux (no dependencies)**
+   **Mac/Linux (no dependencies)**
    ```bash
    openssl rand -base64 32
    ```
 
-   **Option 2: Windows PowerShell (no dependencies)**
+   **Windows PowerShell (no dependencies)**
    ```powershell
    [Convert]::ToBase64String((1..32 | ForEach-Object { Get-Random -Maximum 256 }) -as [byte[]])
    ```
 
-   **Option 3: Any system with Python**
+   **Any system with Python**
    ```bash
    python3 -c "import base64,os;print(base64.urlsafe_b64encode(os.urandom(32)).decode())"
    ```
@@ -64,95 +65,163 @@ LOG_LEVEL=INFO
 4. Upload `env.txt` to `/volume1/docker/unifi-toolkit/`
 
 5. Rename the file from `env.txt` to `.env`:
-   - In File Station, right-click the file
-   - Select **Rename**
-   - Change to `.env`
-   - If File Station warns about hidden files, click OK
+   - In File Station, right-click the file → **Rename** → change to `.env`
 
 ### Option B: Using SSH
 
-1. SSH into your Synology:
-   ```bash
-   ssh admin@your-synology-ip
-   ```
+```bash
+ssh your-admin-user@your-synology-ip
+cd /volume1/docker/unifi-toolkit
 
-2. Create the .env file:
-   ```bash
-   cd /volume1/docker/unifi-toolkit
-
-   # Generate encryption key and create .env
-   cat > .env << 'EOF'
-   ENCRYPTION_KEY=$(python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")
-   DEPLOYMENT_TYPE=local
-   LOG_LEVEL=INFO
-   EOF
-   ```
-
-   Or if Python isn't available, manually create the file with a pre-generated key.
+# Generate key and create .env file
+cat > .env << EOF
+ENCRYPTION_KEY=$(openssl rand -base64 32)
+DEPLOYMENT_TYPE=local
+LOG_LEVEL=INFO
+EOF
+```
 
 ---
 
-## Step 3: Download the Image
+## Step 3: Choose Your Installation Method
+
+Synology Container Manager cannot browse ghcr.io directly. Choose one of these methods:
+
+| Method | Best For | Difficulty |
+|--------|----------|------------|
+| [Method A: SSH Commands](#method-a-ssh-commands-recommended) | Quick setup, familiar with terminal | Easy |
+| [Method B: Container Manager Project](#method-b-container-manager-project) | Prefer GUI management | Moderate |
+
+---
+
+## Method A: SSH Commands (Recommended)
+
+This method pulls the image via SSH and then lets you manage it in Container Manager.
+
+### Step A1: SSH into your Synology
+
+```bash
+ssh your-admin-user@your-synology-ip
+```
+
+### Step A2: Pull the image
+
+```bash
+sudo docker pull ghcr.io/crosstalk-solutions/unifi-toolkit:latest
+```
+
+### Step A3: Create and start the container
+
+```bash
+sudo docker run -d \
+  --name unifi-toolkit \
+  --restart unless-stopped \
+  -p 8000:8000 \
+  -v /volume1/docker/unifi-toolkit/data:/app/data \
+  -v /volume1/docker/unifi-toolkit/.env:/app/.env:ro \
+  ghcr.io/crosstalk-solutions/unifi-toolkit:latest
+```
+
+### Step A4: Verify it's running
+
+```bash
+sudo docker ps | grep unifi-toolkit
+```
+
+You should see the container running. It will also appear in Container Manager's GUI.
+
+### Updating (Method A)
+
+```bash
+ssh your-admin-user@your-synology-ip
+sudo docker pull ghcr.io/crosstalk-solutions/unifi-toolkit:latest
+sudo docker stop unifi-toolkit
+sudo docker rm unifi-toolkit
+sudo docker run -d \
+  --name unifi-toolkit \
+  --restart unless-stopped \
+  -p 8000:8000 \
+  -v /volume1/docker/unifi-toolkit/data:/app/data \
+  -v /volume1/docker/unifi-toolkit/.env:/app/.env:ro \
+  ghcr.io/crosstalk-solutions/unifi-toolkit:latest
+```
+
+---
+
+## Method B: Container Manager Project
+
+This method uses docker-compose via Container Manager's "Project" feature.
+
+### Step B1: Create docker-compose.yml
+
+Create a file called `docker-compose.yml` in `/volume1/docker/unifi-toolkit/` with this content:
+
+```yaml
+services:
+  unifi-toolkit:
+    image: ghcr.io/crosstalk-solutions/unifi-toolkit:latest
+    container_name: unifi-toolkit
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./.env:/app/.env:ro
+```
+
+You can create this file:
+- **Via File Station**: Create on your computer, upload to the folder
+- **Via SSH**:
+  ```bash
+  cat > /volume1/docker/unifi-toolkit/docker-compose.yml << 'EOF'
+  services:
+    unifi-toolkit:
+      image: ghcr.io/crosstalk-solutions/unifi-toolkit:latest
+      container_name: unifi-toolkit
+      restart: unless-stopped
+      ports:
+        - "8000:8000"
+      volumes:
+        - ./data:/app/data
+        - ./.env:/app/.env:ro
+  EOF
+  ```
+
+### Step B2: Pull the image first (required)
+
+Container Manager Projects cannot pull from ghcr.io directly. You must pull the image via SSH first:
+
+```bash
+ssh your-admin-user@your-synology-ip
+sudo docker pull ghcr.io/crosstalk-solutions/unifi-toolkit:latest
+```
+
+### Step B3: Create the Project in Container Manager
 
 1. Open **Container Manager**
-2. Go to **Registry** in the left sidebar
-3. Click **Add** → **Add From URL**
-   > Note: The search box only queries Docker Hub. Since UI Toolkit is hosted on GitHub Container Registry, you must use "Add From URL".
-4. Enter the image URL:
+2. Go to **Project** in the left sidebar
+3. Click **Create**
+4. Configure:
+   - **Project name**: `unifi-toolkit`
+   - **Path**: Click **Set path** and select `/docker/unifi-toolkit`
+   - **Source**: Select "Use existing docker-compose.yml"
+5. Click **Next**, review the settings
+6. Click **Done** to create and start the project
+
+### Updating (Method B)
+
+1. SSH into your Synology and pull the new image:
+   ```bash
+   sudo docker pull ghcr.io/crosstalk-solutions/unifi-toolkit:latest
    ```
-   ghcr.io/crosstalk-solutions/unifi-toolkit:latest
-   ```
-5. Click **Add** or **Download**
-6. Wait for the download to complete (shows in the **Image** section)
+2. In Container Manager → Project → select `unifi-toolkit`
+3. Click **Action** → **Stop**
+4. Click **Action** → **Build** (rebuilds with new image)
+5. Click **Action** → **Start**
 
 ---
 
-## Step 4: Create the Container
-
-1. Go to **Image** in Container Manager
-2. Select `ghcr.io/crosstalk-solutions/unifi-toolkit`
-3. Click **Run**
-4. Configure the container:
-
-### General Settings
-| Setting | Value |
-|---------|-------|
-| Container Name | `unifi-toolkit` |
-| Enable auto-restart | Yes (recommended) |
-
-Click **Next**
-
-### Port Settings
-| Local Port | Container Port | Protocol |
-|------------|----------------|----------|
-| 8000 | 8000 | TCP |
-
-> **Note:** If port 8000 is already in use, choose a different local port (e.g., 8080)
-
-### Volume Settings
-
-Click **Add Folder** twice to create these mappings:
-
-| Folder/File | Mount Path | Mode |
-|-------------|------------|------|
-| `docker/unifi-toolkit/data` | `/app/data` | Read/Write |
-| `docker/unifi-toolkit/.env` | `/app/.env` | Read-only |
-
-> **Important:** For the `.env` file, you're mapping a *file*, not a folder. In the folder browser, navigate into `unifi-toolkit` and select the `.env` file directly.
-
-### Environment (optional)
-
-You can leave this empty since settings come from the `.env` file.
-
-### Review and Run
-
-1. Review your settings
-2. Click **Done** or **Apply**
-3. The container will start automatically
-
----
-
-## Step 5: Access UI Toolkit
+## Step 4: Access UI Toolkit
 
 1. Open your browser
 2. Go to: `http://your-synology-ip:8000`
@@ -161,66 +230,49 @@ You can leave this empty since settings come from the `.env` file.
 
 ---
 
-## Updating UI Toolkit
-
-When a new version is released:
-
-1. Open **Container Manager**
-2. Go to **Container**
-3. Select `unifi-toolkit` and click **Stop**
-4. Go to **Image**
-5. Select `ghcr.io/crosstalk-solutions/unifi-toolkit`
-6. Click **Pull** or delete and re-download with `latest` tag
-7. Go back to **Container**
-8. Select `unifi-toolkit` and click **Start**
-
-Your data and settings are preserved because they're stored in the mapped volumes.
-
----
-
 ## Troubleshooting
 
 ### Container won't start
 
-**Check the logs:**
-1. Go to Container Manager → Container
-2. Click on `unifi-toolkit`
-3. Click **Log** tab
-4. Look for error messages
+**Check the logs via SSH:**
+```bash
+sudo docker logs unifi-toolkit
+```
 
 **Common issues:**
-- Missing `.env` file: Make sure it exists and is mapped correctly
+- Missing `.env` file: Make sure it exists at `/volume1/docker/unifi-toolkit/.env`
 - Missing `ENCRYPTION_KEY`: Verify your `.env` file has a valid key
-- Port conflict: Try a different local port
+- Port conflict: Try a different port (change `8000:8000` to `8080:8000`)
 
 ### Can't access web interface
 
-- Verify the container is running (green status)
+- Verify the container is running: `sudo docker ps | grep unifi-toolkit`
 - Check you're using the correct port
-- Try accessing from the Synology itself: `http://localhost:8000`
-- Check Synology firewall settings
+- Check Synology firewall settings (Control Panel → Security → Firewall)
 
 ### "Permission denied" errors
 
 Fix folder permissions:
-1. SSH into your Synology
-2. Run:
-   ```bash
-   sudo chown -R 1000:1000 /volume1/docker/unifi-toolkit/data
-   sudo chmod 755 /volume1/docker/unifi-toolkit/data
-   ```
+```bash
+sudo chown -R 1000:1000 /volume1/docker/unifi-toolkit/data
+sudo chmod 755 /volume1/docker/unifi-toolkit/data
+```
 
 ### Database errors after update
 
-If you see database errors after updating to a new version:
+Run migrations manually:
+```bash
+sudo docker exec unifi-toolkit alembic upgrade head
+sudo docker restart unifi-toolkit
+```
 
-1. Stop the container
-2. SSH into your Synology
-3. Run the migration manually:
-   ```bash
-   docker exec unifi-toolkit alembic upgrade head
-   ```
-4. Start the container
+### Why can't I use the Container Manager GUI to download the image?
+
+Synology Container Manager only works with registries that fully implement the Docker Registry HTTP API v2. GitHub Container Registry (ghcr.io) has a non-standard implementation that Synology's GUI cannot handle. This is a known limitation affecting all ghcr.io images on Synology.
+
+**References:**
+- [Synology Community: Docker & Github Container Repository](https://community.synology.com/enu/forum/1/post/159445)
+- [GitHub Container Registry, Proxy and Synology](https://williamdurand.fr/2023/03/18/github-container-registry-proxy-and-synology/)
 
 ---
 
@@ -230,7 +282,7 @@ If you see database errors after updating to a new version:
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `ENCRYPTION_KEY` | Fernet key for encrypting credentials | (generated 44-char string) |
+| `ENCRYPTION_KEY` | Key for encrypting credentials | (generated 44-char string) |
 | `DEPLOYMENT_TYPE` | Must be `local` for Synology | `local` |
 
 ### Optional .env Settings
@@ -244,7 +296,7 @@ If you see database errors after updating to a new version:
 ### Complete .env Example
 
 ```
-ENCRYPTION_KEY=your-44-character-fernet-key-here
+ENCRYPTION_KEY=your-44-character-key-here
 DEPLOYMENT_TYPE=local
 LOG_LEVEL=INFO
 STALKER_REFRESH_INTERVAL=60
@@ -253,13 +305,13 @@ UNIFI_VERIFY_SSL=false
 
 ---
 
-## Architecture Notes
+## Architecture Support
 
-UI Toolkit publishes multi-architecture images that support:
-- **amd64** (Intel/AMD Synology: DS920+, DS1621+, etc.)
-- **arm64** (ARM Synology: DS223, DS220j, etc.)
+UI Toolkit publishes multi-architecture images:
+- **amd64** (Intel/AMD Synology: DS920+, DS1621+, RS1221+, etc.)
+- **arm64** (ARM Synology: DS223, DS220j, DS124, etc.)
 
-The correct architecture is selected automatically when you download the image.
+The correct architecture is selected automatically when pulling.
 
 ---
 
