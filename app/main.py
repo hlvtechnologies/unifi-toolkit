@@ -199,6 +199,56 @@ async def health_check():
     }
 
 
+@app.get("/api/debug-info")
+async def get_debug_info():
+    """
+    Get non-sensitive debug information for issue reporting.
+
+    Returns system info that helps with troubleshooting without
+    exposing sensitive data like IPs, credentials, or hostnames.
+    """
+    import sys
+    from pathlib import Path
+    from app import __version__ as app_version
+    from tools.wifi_stalker import __version__ as stalker_version
+    from tools.threat_watch import __version__ as threat_watch_version
+    from tools.network_pulse import __version__ as pulse_version
+    from shared import cache
+
+    settings = get_settings()
+
+    # Detect if running in Docker
+    is_docker = Path("/.dockerenv").exists()
+
+    # Get cached gateway info (if available)
+    gateway_info = cache.get_gateway_info()
+    ips_settings = cache.get_ips_settings()
+
+    # Build response with non-sensitive info only
+    debug_info = {
+        "app_version": app_version,
+        "tool_versions": {
+            "wifi_stalker": stalker_version,
+            "threat_watch": threat_watch_version,
+            "network_pulse": pulse_version
+        },
+        "deployment": {
+            "type": settings.deployment_type,
+            "docker": is_docker,
+            "python_version": f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+        },
+        "gateway": {
+            "model": gateway_info.get("gateway_model") if gateway_info else None,
+            "name": gateway_info.get("gateway_name") if gateway_info else None,
+            "supports_ids_ips": gateway_info.get("supports_ids_ips") if gateway_info else None,
+            "is_unifi_os": gateway_info.get("is_unifi_os") if gateway_info else None,
+            "ips_mode": ips_settings.get("ips_mode") if ips_settings else None
+        }
+    }
+
+    return debug_info
+
+
 @app.get("/api/system-status")
 async def get_system_status():
     """

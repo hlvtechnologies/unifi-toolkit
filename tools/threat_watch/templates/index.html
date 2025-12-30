@@ -590,11 +590,69 @@
 
         <!-- Footer -->
         <footer class="app-footer">
-            <p><a href="https://github.com/Crosstalk-Solutions/unifi-toolkit" target="_blank">UI Toolkit - Threat Watch</a> v{{ version }} | by <a href="https://www.crosstalksolutions.com" target="_blank">Crosstalk Solutions</a></p>
+            <p><a href="https://github.com/Crosstalk-Solutions/unifi-toolkit" target="_blank">UI Toolkit - Threat Watch</a> v{{ version }} | by <a href="https://www.crosstalksolutions.com" target="_blank">Crosstalk Solutions</a> | <a href="#" id="report-issue-link">Report Issue</a></p>
             <p class="footer-disclaimer">Not affiliated with Ubiquiti Inc. UniFi is a trademark of Ubiquiti Inc.</p>
         </footer>
     </div>
 
     <script src="/threats/static/js/app.js"></script>
+    <script>
+        // Report Issue Link Builder
+        (function() {
+            const reportLink = document.getElementById('report-issue-link');
+            const GITHUB_REPO = 'https://github.com/Crosstalk-Solutions/unifi-toolkit';
+
+            reportLink.addEventListener('click', async function(e) {
+                e.preventDefault();
+
+                let body = `## Description
+<!-- Please describe the issue you're experiencing -->
+
+
+## Steps to Reproduce
+1.
+2.
+3.
+
+## Expected Behavior
+
+
+## Actual Behavior
+
+
+## Environment
+`;
+
+                try {
+                    const response = await fetch('/api/debug-info');
+                    const info = await response.json();
+
+                    body += `- **App Version:** ${info.app_version}\n`;
+                    body += `- **Tool:** Threat Watch ${info.tool_versions.threat_watch}\n`;
+                    body += `- **Deployment:** ${info.deployment.type}, Docker: ${info.deployment.docker ? 'Yes' : 'No'}, Python: ${info.deployment.python_version}\n`;
+                    if (info.gateway.model) {
+                        let gatewayStr = info.gateway.model;
+                        if (info.gateway.name) gatewayStr += ` (${info.gateway.name})`;
+                        body += `- **Gateway:** ${gatewayStr}, UniFi OS: ${info.gateway.is_unifi_os ? 'Yes' : 'No'}\n`;
+                        body += `- **IDS/IPS Support:** ${info.gateway.supports_ids_ips ? 'Yes' : 'No'}\n`;
+                        if (info.gateway.ips_mode) {
+                            body += `- **IPS Mode:** ${info.gateway.ips_mode}\n`;
+                        }
+                    }
+                } catch (error) {
+                    body += `- **Tool:** Threat Watch {{ version }}\n`;
+                }
+                body += `- **Browser:** ${navigator.userAgent}\n`;
+
+                const issueUrl = `${GITHUB_REPO}/issues/new?` + new URLSearchParams({
+                    title: '[Threat Watch] ',
+                    body: body,
+                    labels: 'bug,threat-watch'
+                }).toString();
+
+                window.open(issueUrl, '_blank');
+            });
+        })();
+    </script>
 </body>
 </html>

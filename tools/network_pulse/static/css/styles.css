@@ -647,6 +647,17 @@ body {
     color: var(--text-muted);
 }
 
+.footer-link {
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.footer-link:hover {
+    color: var(--brand-blue);
+    text-decoration: underline;
+}
+
 /* ============================================
    Loading & Error States
    ============================================ */

@@ -262,6 +262,8 @@
                 <span>Auto-refresh: <span x-text="data.refresh_interval || 60"></span>s</span>
             </div>
             <div class="footer-right">
+                <a href="#" id="report-issue-link" class="footer-link">Report Issue</a>
+                <span class="separator">|</span>
                 <span class="version">v{{ version }}</span>
             </div>
         </footer>
@@ -280,5 +282,59 @@
     </div>
 
     <script src="/pulse/static/js/app.js"></script>
+    <script>
+        // Report Issue Link Builder
+        (function() {
+            const reportLink = document.getElementById('report-issue-link');
+            const GITHUB_REPO = 'https://github.com/Crosstalk-Solutions/unifi-toolkit';
+
+            reportLink.addEventListener('click', async function(e) {
+                e.preventDefault();
+
+                let body = `## Description
+<!-- Please describe the issue you're experiencing -->
+
+
+## Steps to Reproduce
+1.
+2.
+3.
+
+## Expected Behavior
+
+
+## Actual Behavior
+
+
+## Environment
+`;
+
+                try {
+                    const response = await fetch('/api/debug-info');
+                    const info = await response.json();
+
+                    body += `- **App Version:** ${info.app_version}\n`;
+                    body += `- **Tool:** Network Pulse ${info.tool_versions.network_pulse}\n`;
+                    body += `- **Deployment:** ${info.deployment.type}, Docker: ${info.deployment.docker ? 'Yes' : 'No'}, Python: ${info.deployment.python_version}\n`;
+                    if (info.gateway.model) {
+                        let gatewayStr = info.gateway.model;
+                        if (info.gateway.name) gatewayStr += ` (${info.gateway.name})`;
+                        body += `- **Gateway:** ${gatewayStr}, UniFi OS: ${info.gateway.is_unifi_os ? 'Yes' : 'No'}\n`;
+                    }
+                } catch (error) {
+                    body += `- **Tool:** Network Pulse {{ version }}\n`;
+                }
+                body += `- **Browser:** ${navigator.userAgent}\n`;
+
+                const issueUrl = `${GITHUB_REPO}/issues/new?` + new URLSearchParams({
+                    title: '[Network Pulse] ',
+                    body: body,
+                    labels: 'bug,network-pulse'
+                }).toString();
+
+                window.open(issueUrl, '_blank');
+            });
+        })();
+    </script>
 </body>
 </html>

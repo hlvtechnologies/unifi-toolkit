@@ -448,7 +448,7 @@
             </p>
             <p class="footer-links">
                 <a href="/health">Health Check</a> |
-                <a href="https://github.com/Crosstalk-Solutions/unifi-toolkit/issues" target="_blank">Report Issue</a> |
+                <a href="#" id="report-issue-link" target="_blank">Report Issue</a> |
                 <a href="https://github.com/Crosstalk-Solutions/unifi-toolkit#readme" target="_blank">Documentation</a> |
                 <a href="https://ko-fi.com/crosstalk" target="_blank" class="donate-link">☕ Buy Me a Coffee</a>
             </p>
@@ -1031,6 +1031,92 @@
                     checkGatewayAvailability();
                 }
             }, 5000);
+        })();
+
+        // Report Issue Link Builder
+        (function() {
+            const reportLink = document.getElementById('report-issue-link');
+            const GITHUB_REPO = 'https://github.com/Crosstalk-Solutions/unifi-toolkit';
+
+            reportLink.addEventListener('click', async function(e) {
+                e.preventDefault();
+
+                // Build issue body with system info
+                let body = `## Description
+<!-- Please describe the issue you're experiencing -->
+
+
+## Steps to Reproduce
+<!-- What steps lead to the issue? -->
+1.
+2.
+3.
+
+## Expected Behavior
+<!-- What did you expect to happen? -->
+
+
+## Actual Behavior
+<!-- What actually happened? -->
+
+
+## Environment
+`;
+
+                try {
+                    // Fetch debug info from API
+                    const response = await fetch('/api/debug-info');
+                    const info = await response.json();
+
+                    // Add app versions
+                    body += `- **App Version:** ${info.app_version}\n`;
+                    body += `- **Tool Versions:**\n`;
+                    body += `  - Wi-Fi Stalker: ${info.tool_versions.wifi_stalker}\n`;
+                    body += `  - Threat Watch: ${info.tool_versions.threat_watch}\n`;
+                    body += `  - Network Pulse: ${info.tool_versions.network_pulse}\n`;
+
+                    // Add deployment info
+                    body += `- **Deployment:**\n`;
+                    body += `  - Type: ${info.deployment.type}\n`;
+                    body += `  - Docker: ${info.deployment.docker ? 'Yes' : 'No'}\n`;
+                    body += `  - Python: ${info.deployment.python_version}\n`;
+
+                    // Add gateway info if available
+                    if (info.gateway.model) {
+                        body += `- **Gateway:**\n`;
+                        body += `  - Model: ${info.gateway.model}`;
+                        if (info.gateway.name) {
+                            body += ` (${info.gateway.name})`;
+                        }
+                        body += `\n`;
+                        body += `  - UniFi OS: ${info.gateway.is_unifi_os ? 'Yes' : 'No'}\n`;
+                        body += `  - IDS/IPS Support: ${info.gateway.supports_ids_ips ? 'Yes' : 'No'}\n`;
+                        if (info.gateway.ips_mode) {
+                            body += `  - IPS Mode: ${info.gateway.ips_mode}\n`;
+                        }
+                    } else {
+                        body += `- **Gateway:** Not configured or not connected\n`;
+                    }
+
+                } catch (error) {
+                    // If we can't fetch debug info, just include basic info
+                    body += `- **App Version:** {{ app_version }}\n`;
+                    body += `- _(Could not fetch additional debug info)_\n`;
+                }
+
+                // Add browser info (client-side)
+                body += `- **Browser:** ${navigator.userAgent}\n`;
+
+                // Build the GitHub URL
+                const issueUrl = `${GITHUB_REPO}/issues/new?` + new URLSearchParams({
+                    title: '',
+                    body: body,
+                    labels: 'bug'
+                }).toString();
+
+                // Open in new tab
+                window.open(issueUrl, '_blank');
+            });
         })();
     </script>
 </body>
