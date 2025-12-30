@@ -28,6 +28,8 @@ You can then connect with: `ssh your-admin-user@your-synology-ip`
 
 ## Step 1: Create Folder Structure
 
+> **Note:** This guide uses `/volume1/` in examples. Your Synology may use `/volume2/` or another path depending on your storage configuration. Substitute your actual volume path in all commands.
+
 1. Open **File Station**
 2. Navigate to the `docker` shared folder (create it if it doesn't exist)
 3. Create a new folder called `unifi-toolkit`
@@ -35,7 +37,7 @@ You can then connect with: `ssh your-admin-user@your-synology-ip`
 
 Your structure should look like:
 ```
-/volume1/docker/unifi-toolkit/
+/volume1/docker/unifi-toolkit/   (or /volume2/, etc.)
 └── data/
 ```
 
