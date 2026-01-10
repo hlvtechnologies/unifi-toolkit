@@ -82,12 +82,19 @@ docker run hello-world
 # Update package list
 sudo apt update
 
-# Install Python 3.11 and required packages
-sudo apt install -y python3.11 python3.11-venv python3-pip git
+# Install Python and required packages
+# Ubuntu 24.04: Python 3.12 is the default
+sudo apt install -y python3.12 python3.12-venv git
+
+# Ubuntu 22.04: Python 3.10 is the default, install 3.11 or 3.12
+sudo apt install -y python3.11 python3.11-venv git
+# OR use the deadsnakes PPA for Python 3.12
 
 # Verify Python version (must be 3.9-3.12, NOT 3.13+)
-python3.11 --version
+python3.12 --version
 ```
+
+> **Note for Ubuntu 24.04 users:** The system Python is "externally managed" (PEP 668), which prevents system-wide pip installs. This is expected - you **must** use a virtual environment (venv) as shown in the installation steps below. The venv approach works around this protection.
 
 ---
 
@@ -153,13 +160,13 @@ The pre-built image is pulled automatically from GitHub Container Registry.
 ### Start with Python (Alternative)
 
 ```bash
-# Create virtual environment
-python3.11 -m venv venv
+# Create virtual environment (use python3.12 on Ubuntu 24.04, python3.11 on 22.04)
+python3.12 -m venv venv
 
 # Activate virtual environment
 source venv/bin/activate
 
-# Install dependencies
+# Install dependencies (this works inside the venv, even on Ubuntu 24.04)
 pip install -r requirements.txt
 
 # Start the application
@@ -462,6 +469,30 @@ docker compose logs unifi-toolkit
 - Missing `.env` file: Run `./setup.sh`
 - Missing `ENCRYPTION_KEY`: Regenerate with setup wizard
 - Port 8000 in use: Change `APP_PORT` in `.env`
+
+### "externally-managed-environment" Error (Ubuntu 24.04)
+
+**Symptom:** When running `pip install`, you get:
+```
+error: externally-managed-environment
+```
+
+**Cause:** Ubuntu 24.04 (and other recent distros) mark the system Python as "externally managed" per PEP 668 to prevent breaking system packages.
+
+**Fix:** Use a virtual environment (venv):
+```bash
+# Install Python 3.12 venv support
+sudo apt install python3.12 python3.12-venv
+
+# Create and activate virtual environment
+python3.12 -m venv venv
+source venv/bin/activate
+
+# Now pip install works
+pip install -r requirements.txt
+```
+
+**Important:** You must activate the venv (`source venv/bin/activate`) every time you open a new terminal before running the app.
 
 ### Can't Connect to UniFi Controller
 
