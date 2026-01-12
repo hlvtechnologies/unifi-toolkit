@@ -2,6 +2,15 @@
 
 All notable changes to UI Toolkit will be documented in this file.
 
+## [1.8.4] - 2025-01-11
+
+### Wi-Fi Stalker v0.11.3
+
+#### Improved
+- **Faster device details modal** - Modal now opens instantly with cached data while live UniFi data loads in the background. Previously, clicking a device would wait for the API call to complete before showing the modal.
+
+---
+
 ## [1.8.3] - 2025-01-10
 
 ### Wi-Fi Stalker v0.11.2

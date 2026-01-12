@@ -839,6 +839,33 @@ code {
     font-weight: 600;
 }
 
+/* Live data loading indicator */
+.live-data-loading {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    margin-bottom: 1rem;
+    background: var(--background);
+    border-radius: 6px;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+.loading-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background: var(--primary-color);
+    border-radius: 50%;
+    animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 0.4; transform: scale(0.8); }
+    50% { opacity: 1; transform: scale(1); }
+}
+
 .analytics-loading {
     display: flex;
     align-items: center;

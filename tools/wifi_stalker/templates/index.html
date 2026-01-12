@@ -431,6 +431,11 @@
                     <button @click="showDeviceDetails = false" class="close-btn">×</button>
                 </div>
                 <div class="modal-body" x-show="deviceDetails">
+                    <!-- Live data loading indicator -->
+                    <div class="live-data-loading" x-show="deviceDetails?._loading_live_data">
+                        <span class="loading-dot"></span> Fetching live data from UniFi...
+                    </div>
+
                     <!-- Device Info Grid -->
                     <div class="device-info-grid">
                         <!-- Basic Info -->

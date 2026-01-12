@@ -461,44 +461,68 @@ function dashboard() {
          * View detailed device information
          */
         async viewDeviceDetails(deviceId) {
+            // Immediately show modal with basic data we already have
+            const basicDevice = this.devices.find(d => d.id === deviceId);
+            if (!basicDevice) {
+                this.showToast('Device not found', 'error');
+                return;
+            }
+
+            // Set initial device details from cached list data
+            this.deviceDetails = {
+                ...basicDevice,
+                // Mark that we're still loading live data
+                _loading_live_data: true
+            };
+            this.showDeviceDetails = true;
+
+            // Reset analytics state
+            this.analyticsLoading = !basicDevice.is_wired;
+            this.analyticsError = null;
+            this.dwellTimeData = null;
+            this.favoriteAP = null;
+            this.presencePattern = null;
+
+            // Destroy existing chart
+            if (this.dwellTimeChart) {
+                this.dwellTimeChart.destroy();
+                this.dwellTimeChart = null;
+            }
+
+            // Load live UniFi data and analytics in background
             try {
-                const response = await fetch(`${API_BASE_PATH}/api/devices/${deviceId}/details`);
-                const data = await response.json();
-                this.deviceDetails = data;
-                this.showDeviceDetails = true;
+                // Start all requests in parallel
+                const promises = [
+                    fetch(`${API_BASE_PATH}/api/devices/${deviceId}/details`).then(r => r.json())
+                ];
 
-                // Load analytics for wireless devices
-                if (!data.is_wired) {
-                    // Reset analytics data and set loading state
-                    this.analyticsLoading = true;
-                    this.analyticsError = null;
-                    this.dwellTimeData = null;
-                    this.favoriteAP = null;
-                    this.presencePattern = null;
+                // Add analytics requests for wireless devices
+                if (!basicDevice.is_wired) {
+                    promises.push(
+                        this.loadDwellTime(deviceId),
+                        this.loadFavoriteAP(deviceId),
+                        this.loadPresencePattern(deviceId)
+                    );
+                }
 
-                    // Destroy existing chart
-                    if (this.dwellTimeChart) {
-                        this.dwellTimeChart.destroy();
-                        this.dwellTimeChart = null;
-                    }
+                // Wait for all to complete
+                const results = await Promise.all(promises);
 
-                    try {
-                        // Load analytics data in parallel
-                        await Promise.all([
-                            this.loadDwellTime(deviceId),
-                            this.loadFavoriteAP(deviceId),
-                            this.loadPresencePattern(deviceId)
-                        ]);
-                    } catch (analyticsError) {
-                        console.error('Failed to load analytics:', analyticsError);
-                        this.analyticsError = 'Failed to load analytics data';
-                    } finally {
-                        this.analyticsLoading = false;
-                    }
+                // Update device details with live data (if modal still open)
+                if (this.showDeviceDetails && this.deviceDetails?.id === deviceId) {
+                    this.deviceDetails = {
+                        ...results[0],
+                        _loading_live_data: false
+                    };
                 }
             } catch (error) {
                 console.error('Failed to load device details:', error);
-                this.showToast('Failed to load device details', 'error');
+                // Don't show error toast - we already have basic info displayed
+                if (this.deviceDetails) {
+                    this.deviceDetails._loading_live_data = false;
+                }
+            } finally {
+                this.analyticsLoading = false;
             }
         },
 
