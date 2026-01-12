@@ -170,22 +170,22 @@ function dashboard() {
         handleDeviceUpdate(deviceData) {
             console.log('Device update:', deviceData);
 
-            // Find the device in our devices array
             const index = this.devices.findIndex(d => d.id === deviceData.id);
 
             if (index !== -1) {
+                const previousStatus = this.devices[index].is_connected;
+                const deviceName = deviceData.friendly_name || deviceData.mac_address;
+
                 // Update existing device
-                this.devices[index] = {
-                    ...this.devices[index],
-                    ...deviceData
-                };
+                this.devices[index] = { ...this.devices[index], ...deviceData };
 
                 // Show toast notification for status changes
-                const device = this.devices[index];
-                if (deviceData.is_connected && deviceData.is_connected !== this.devices[index].is_connected) {
-                    this.showToast(`${device.friendly_name || device.mac_address} connected`, 'success');
-                } else if (!deviceData.is_connected && deviceData.is_connected !== this.devices[index].is_connected) {
-                    this.showToast(`${device.friendly_name || device.mac_address} disconnected`, 'info');
+                if (deviceData.is_connected !== previousStatus) {
+                    if (deviceData.is_connected) {
+                        this.showToast(`${deviceName} connected`, 'success');
+                    } else {
+                        this.showToast(`${deviceName} disconnected`, 'info');
+                    }
                 }
             } else {
                 // New device, add to list
@@ -617,11 +617,11 @@ function dashboard() {
          * Format bytes to human readable
          */
         formatBytes(bytes) {
-            if (!bytes) return '-';
+            if (bytes == null || bytes === 0) return '-';
             const sizes = ['B', 'KB', 'MB', 'GB'];
-            if (bytes === 0) return '0 B';
             const i = Math.floor(Math.log(bytes) / Math.log(1024));
-            return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
+            const value = Math.round(bytes / Math.pow(1024, i) * 100) / 100;
+            return `${value} ${sizes[i]}`;
         },
 
         /**
@@ -837,18 +837,7 @@ function dashboard() {
          * Edit webhook
          */
         editWebhook(webhook) {
-            this.webhookForm = {
-                id: webhook.id,
-                name: webhook.name,
-                webhook_type: webhook.webhook_type,
-                url: webhook.url,
-                event_device_connected: webhook.event_device_connected,
-                event_device_disconnected: webhook.event_device_disconnected,
-                event_device_roamed: webhook.event_device_roamed,
-                event_device_blocked: webhook.event_device_blocked,
-                event_device_unblocked: webhook.event_device_unblocked,
-                enabled: webhook.enabled
-            };
+            this.webhookForm = { ...webhook };
             this.showEditWebhook = true;
         },
 
@@ -1147,20 +1136,16 @@ function dashboard() {
          */
         getHeatTooltip(block, day, value) {
             const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-            const startHour = block * 2;
-            const endHour = startHour + 2;
             const startStr = this.formatHourBlock(block);
-            const endStr = endHour === 24 ? '12a' : this.formatHourBlock(block + 1);
-            const dayStr = days[day];
+            // Block 11 (22:00-24:00) ends at midnight, which is '12a'
+            const endStr = block === 11 ? '12a' : this.formatHourBlock(block + 1);
+            const prefix = `${days[day]} ${startStr}-${endStr}:`;
 
             if (value === 0) {
-                return `${dayStr} ${startStr}-${endStr}: Rarely connected`;
+                return `${prefix} Rarely connected`;
             }
-
-            if (value >= 50) {
-                return `${dayStr} ${startStr}-${endStr}: Usually connected (~${value}min avg)`;
-            }
-            return `${dayStr} ${startStr}-${endStr}: Sometimes connected (~${value}min avg)`;
+            const frequency = value >= 50 ? 'Usually' : 'Sometimes';
+            return `${prefix} ${frequency} connected (~${value}min avg)`;
         }
     };
 }

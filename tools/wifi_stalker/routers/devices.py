@@ -1,37 +1,45 @@
 """
 Device management API endpoints
 """
-from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import StreamingResponse
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
-from typing import List, Optional
-from datetime import datetime, timezone, timedelta
 import asyncio
 import csv
 import io
+import logging
+from datetime import datetime, timedelta, timezone
+from typing import Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import StreamingResponse
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from shared.database import get_db_session
 from shared.unifi_client import UniFiClient
-from tools.wifi_stalker.database import TrackedDevice, ConnectionHistory, WebhookConfig, HourlyPresence
+from tools.wifi_stalker.database import (
+    ConnectionHistory,
+    HourlyPresence,
+    TrackedDevice,
+)
 from tools.wifi_stalker.models import (
     DeviceCreate,
-    DeviceResponse,
-    DeviceListResponse,
     DeviceDetailResponse,
-    HistoryEntry,
+    DeviceListResponse,
+    DeviceResponse,
+    DwellTimeResponse,
+    FavoriteAPResponse,
     HistoryListResponse,
+    PresencePatternResponse,
     SuccessResponse,
     UniFiClientInfo,
     UniFiClientsResponse,
-    SystemStatus,
-    DwellTimeResponse,
-    FavoriteAPResponse,
-    PresencePatternResponse
 )
 from tools.wifi_stalker.routers.config import get_unifi_client
-from tools.wifi_stalker.scheduler import refresh_single_device, get_last_refresh, trigger_webhooks
-from shared.config import get_settings
+from tools.wifi_stalker.scheduler import (
+    refresh_single_device,
+    trigger_webhooks,
+)
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/devices", tags=["devices"])
 
@@ -171,32 +179,24 @@ async def get_device_details(
 
                 if client:
                     # Extract UniFi data (handle both dict and object formats)
+                    live_fields = [
+                        "hostname", "tx_rate", "rx_rate", "channel",
+                        "radio", "uptime", "tx_bytes", "rx_bytes"
+                    ]
+                    for field in live_fields:
+                        if isinstance(client, dict):
+                            detail_data[field] = client.get(field)
+                        else:
+                            detail_data[field] = getattr(client, field, None)
+                    # Get manufacturer from UniFi's OUI data
                     if isinstance(client, dict):
-                        detail_data["hostname"] = client.get("hostname")
-                        detail_data["tx_rate"] = client.get("tx_rate")
-                        detail_data["rx_rate"] = client.get("rx_rate")
-                        detail_data["channel"] = client.get("channel")
-                        detail_data["radio"] = client.get("radio")
-                        detail_data["uptime"] = client.get("uptime")
-                        detail_data["tx_bytes"] = client.get("tx_bytes")
-                        detail_data["rx_bytes"] = client.get("rx_bytes")
-                        # Get manufacturer from UniFi's OUI data
                         detail_data["manufacturer"] = client.get("oui")
                     else:
-                        detail_data["hostname"] = getattr(client, "hostname", None)
-                        detail_data["tx_rate"] = getattr(client, "tx_rate", None)
-                        detail_data["rx_rate"] = getattr(client, "rx_rate", None)
-                        detail_data["channel"] = getattr(client, "channel", None)
-                        detail_data["radio"] = getattr(client, "radio", None)
-                        detail_data["uptime"] = getattr(client, "uptime", None)
-                        detail_data["tx_bytes"] = getattr(client, "tx_bytes", None)
-                        detail_data["rx_bytes"] = getattr(client, "rx_bytes", None)
-                        # Get manufacturer from UniFi's OUI data
                         detail_data["manufacturer"] = getattr(client, "oui", None)
 
         finally:
             await unifi_client.disconnect()
-    except Exception as e:
+    except Exception:
         # If we can't get live data, just return basic info with default blocked status
         pass
 
@@ -430,20 +430,15 @@ async def discover_unifi_clients(
                     hostname = getattr(client, 'hostname', None)
 
                 # Use friendly name if exists, otherwise use hostname
-                # Don't duplicate - if friendly_name == hostname, only show once
-                display_name = None
-                if friendly_name and hostname and friendly_name != hostname:
-                    display_name = friendly_name
-                elif friendly_name:
-                    display_name = friendly_name
-                elif hostname:
-                    display_name = hostname
+                display_name = friendly_name or hostname
+                # Only show hostname separately if it differs from the display name
+                show_hostname = hostname if friendly_name and friendly_name != hostname else None
 
                 client_list.append(UniFiClientInfo(
-                    mac_address=mac.upper(),  # Display in uppercase for consistency
+                    mac_address=mac.upper(),
                     name=display_name,
-                    hostname=hostname if friendly_name and friendly_name != hostname else None,
-                    is_tracked=mac.lower() in tracked_macs
+                    hostname=show_hostname,
+                    is_tracked=mac.lower() in tracked_macs,
                 ))
 
             # Sort by name (tracked devices first, then alphabetically)

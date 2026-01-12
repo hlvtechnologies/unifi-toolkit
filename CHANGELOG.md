@@ -2,6 +2,19 @@
 
 All notable changes to UI Toolkit will be documented in this file.
 
+## [1.8.5] - 2025-01-12
+
+### Wi-Fi Stalker v0.11.4
+
+#### Fixed
+- **Device status notifications** - Fixed a bug where connection/disconnection toast notifications were not triggering because the status comparison happened after the device data was already updated.
+- **Byte formatting edge case** - Fixed dead code where the `bytes === 0` check was unreachable because it was placed after a falsy check that already caught zero values.
+
+#### Improved
+- **Code cleanup** - Removed unused imports, simplified display name logic, consolidated repetitive code into loops, and modernized string concatenation to template literals.
+
+---
+
 ## [1.8.4] - 2025-01-11
 
 ### Wi-Fi Stalker v0.11.3
