@@ -55,6 +55,50 @@ if not encryption_key:
     print("=" * 70)
     sys.exit(1)
 
+# Run database migrations before starting the app
+# This runs in a normal synchronous context, avoiding any async/uvicorn complications
+def run_migrations():
+    """Run Alembic migrations before uvicorn starts."""
+    try:
+        from alembic.config import Config
+        from alembic import command
+
+        print("Running database migrations...")
+        alembic_cfg = Config("alembic.ini")
+        command.upgrade(alembic_cfg, "head")
+        print("Database migrations completed successfully")
+
+    except Exception as e:
+        error_msg = str(e).lower()
+
+        # Check for common schema sync issues
+        schema_sync_errors = [
+            "already exists",
+            "duplicate column",
+            "table already exists",
+            "unique constraint failed",
+        ]
+
+        is_schema_sync_issue = any(err in error_msg for err in schema_sync_errors)
+
+        if is_schema_sync_issue:
+            print(f"Migration detected schema sync issue: {e}")
+            print("Attempting to synchronize migration history...")
+
+            try:
+                from alembic.config import Config
+                from alembic import command
+
+                alembic_cfg = Config("alembic.ini")
+                command.stamp(alembic_cfg, "head")
+                print("Migration history synchronized with current schema")
+            except Exception as stamp_error:
+                print(f"Failed to synchronize migration history: {stamp_error}")
+        else:
+            print(f"Migration warning: {e}")
+            print("The application will continue, but some features may not work correctly.")
+
+
 # Start the application
 if __name__ == "__main__":
     import uvicorn
@@ -63,6 +107,9 @@ if __name__ == "__main__":
     from tools.wifi_stalker import __version__ as stalker_version
     from tools.threat_watch import __version__ as threat_watch_version
     from tools.network_pulse import __version__ as pulse_version
+
+    # Run migrations FIRST, before any uvicorn/async stuff
+    run_migrations()
 
     settings = get_settings()
 
