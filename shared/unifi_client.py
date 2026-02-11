@@ -23,6 +23,7 @@ IDS_IPS_SUPPORTED_MODELS = {
     "UDMPROSE",     # UDM SE (alternate code)
     "UDMSE",        # UDM SE
     "UDR",          # UDR (Dream Router)
+    "UDR7",         # UDR7 (Dream Router 7)
     "UDW",          # UDW (Dream Wall)
     # UXG series (Next-Gen Gateway)
     "UXG",          # UXG Lite (model code is just "UXG" not "UXGLITE")
@@ -52,6 +53,7 @@ UNIFI_MODEL_NAMES = {
     "UDMPROSE": "UDM SE",
     "UDMSE": "UDM SE",
     "UDR": "UDR",
+    "UDR7": "Dream Router 7",
     "UDW": "UDW",
     # UXG series - Note: "UXG" is the model code for UXG Lite
     "UXG": "UXG Lite",
@@ -1397,10 +1399,13 @@ class UniFiClient:
                     devices = data.get('data', [])
 
                     # Look for gateway device types
-                    # ux = UniFi Express, ugw = USG, udm = Dream Machine, uxg = UXG series
+                    # Prioritize dedicated gateways (ugw, udm, uxg) over UniFi Express (ux)
+                    # because Express can be either a standalone gateway OR just a mesh AP
+                    express_device = None
                     for device in devices:
                         device_type = device.get('type', '')
-                        if device_type in ('ugw', 'udm', 'uxg', 'ux'):
+                        if device_type in ('ugw', 'udm', 'uxg'):
+                            # Dedicated gateway — always use this
                             model_code = device.get('model', '').upper()
                             result["has_gateway"] = True
                             result["gateway_model"] = model_code
@@ -1412,6 +1417,23 @@ class UniFiClient:
                                 f"IDS/IPS: {result['supports_ids_ips']}"
                             )
                             return result
+                        elif device_type == 'ux' and express_device is None:
+                            # UniFi Express — save as fallback in case no dedicated gateway exists
+                            express_device = device
+
+                    # No dedicated gateway found; use Express if present (standalone mode)
+                    if express_device:
+                        model_code = express_device.get('model', '').upper()
+                        result["has_gateway"] = True
+                        result["gateway_model"] = model_code
+                        result["gateway_name"] = express_device.get('name') or get_friendly_model_name(model_code)
+                        result["supports_ids_ips"] = model_code in IDS_IPS_SUPPORTED_MODELS
+
+                        logger.info(
+                            f"Found Express as gateway: {result['gateway_name']} ({model_code}), "
+                            f"IDS/IPS: {result['supports_ids_ips']}"
+                        )
+                        return result
 
                     logger.info("No gateway device found in devices list")
                 else:

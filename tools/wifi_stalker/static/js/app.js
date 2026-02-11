@@ -1028,6 +1028,7 @@ function dashboard() {
                                         }
                                         return {
                                             text: displayValue,
+                                            fontColor: textColor,
                                             fillStyle: dataset.backgroundColor[i],
                                             strokeStyle: dataset.backgroundColor[i],
                                             lineWidth: 0,

@@ -2,6 +2,17 @@
 
 All notable changes to UI Toolkit will be documented in this file.
 
+## [1.8.9] - 2026-02-11
+
+### Fixed
+- **Threat Watch gateway detection** - Fixed issue where a UniFi Express AP could be misidentified as the gateway, causing Threat Watch to incorrectly report "doesn't support IDS/IPS" even when a capable gateway (like UCG-Max) was present. Gateway detection now prioritizes dedicated gateways over Express devices. (#19)
+- **Dark mode chart legend** - Fixed unreadable text in the Wi-Fi Stalker Dwell Time chart legend when using dark mode. Chart.js was ignoring the theme-aware color config for custom legend labels. (#18)
+
+### Added
+- **Dream Router 7 support** - Added UDR7 to the IDS/IPS supported models list for Threat Watch compatibility. (#21)
+
+---
+
 ## [1.8.8] - 2026-02-11
 
 ### Added
