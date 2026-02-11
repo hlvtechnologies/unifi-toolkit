@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Container version="2">
+  <Name>UniFi-Toolkit</Name>
+  <Repository>crosstalksolutions/unifi-toolkit</Repository>
+  <Registry>https://hub.docker.com/r/crosstalksolutions/unifi-toolkit</Registry>
+  <Branch>
+    <Tag>latest</Tag>
+    <TagDescription>Latest stable release</TagDescription>
+  </Branch>
+  <Network>bridge</Network>
+  <Shell>bash</Shell>
+  <Privileged>false</Privileged>
+  <Project>https://github.com/Crosstalk-Solutions/unifi-toolkit</Project>
+  <Overview>UniFi network management toolkit with Threat Watch (IDS/IPS monitoring), Wi-Fi Stalker (device tracking), and Network Pulse (real-time stats). Configure your UniFi controller via the web UI after first launch.</Overview>
+  <Category>Network:Management Tools:</Category>
+  <Icon>https://raw.githubusercontent.com/Crosstalk-Solutions/unifi-toolkit/main/logo/2022-Crosstalk-Solutions-Icon.png</Icon>
+  <WebUI>http://[IP]:[PORT:8000]</WebUI>
+
+  <!-- Port -->
+  <Config Name="Web UI Port" Target="8000" Default="8000" Mode="tcp"
+          Type="Port" Display="always" Required="true"
+          Description="Port for the web interface">8000</Config>
+
+  <!-- Data volume -->
+  <Config Name="Data Directory" Target="/app/data" Default="/mnt/user/appdata/unifi-toolkit"
+          Mode="rw" Type="Path" Display="always" Required="true"
+          Description="Persistent storage for database and configuration">/mnt/user/appdata/unifi-toolkit</Config>
+
+  <!-- Required settings -->
+  <Config Name="Encryption Key" Target="ENCRYPTION_KEY" Default=""
+          Type="Variable" Display="always" Required="true" Mask="true"
+          Description="Fernet encryption key for securing UniFi credentials. Generate with: python -c &quot;from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())&quot;"/>
+
+  <!-- UniFi settings (optional - can also be configured via the web UI) -->
+  <Config Name="UniFi Controller URL" Target="UNIFI_CONTROLLER_URL" Default=""
+          Type="Variable" Display="always" Required="false"
+          Description="URL of your UniFi controller (e.g. https://192.168.1.1). Can also be configured via the web UI."/>
+
+  <Config Name="UniFi API Key" Target="UNIFI_API_KEY" Default=""
+          Type="Variable" Display="always" Required="false" Mask="true"
+          Description="API key for UniFi OS devices (UDM, UCG-Fiber, etc.). Generate in UniFi OS Settings &gt; Admins &gt; Create API Token."/>
+
+  <!-- Advanced settings -->
+  <Config Name="UniFi Site ID" Target="UNIFI_SITE_ID" Default="default"
+          Type="Variable" Display="advanced" Required="false"
+          Description="UniFi site ID (default: default)">default</Config>
+
+  <Config Name="UniFi Username" Target="UNIFI_USERNAME" Default=""
+          Type="Variable" Display="advanced" Required="false"
+          Description="Username for legacy UniFi controllers (use API key instead for UniFi OS)"/>
+
+  <Config Name="UniFi Password" Target="UNIFI_PASSWORD" Default=""
+          Type="Variable" Display="advanced" Required="false" Mask="true"
+          Description="Password for legacy UniFi controllers"/>
+
+  <Config Name="Verify SSL" Target="UNIFI_VERIFY_SSL" Default="false"
+          Type="Variable" Display="advanced" Required="false"
+          Description="Verify SSL certificates when connecting to UniFi controller (default: false)">false</Config>
+
+  <Config Name="Log Level" Target="LOG_LEVEL" Default="INFO"
+          Type="Variable" Display="advanced" Required="false"
+          Description="Logging level: DEBUG, INFO, WARNING, ERROR, CRITICAL">INFO</Config>
+
+  <Config Name="Stalker Refresh Interval" Target="STALKER_REFRESH_INTERVAL" Default="60"
+          Type="Variable" Display="advanced" Required="false"
+          Description="Wi-Fi Stalker device refresh interval in seconds">60</Config>
+</Container>

@@ -2,6 +2,16 @@
 
 All notable changes to UI Toolkit will be documented in this file.
 
+## [1.8.8] - 2026-02-11
+
+### Added
+- **Unraid template** - Added `unraid/unifi-toolkit.xml` for Unraid users to easily deploy via Community Applications or manual template import.
+
+### Improved
+- **Flexible config loading** - The app no longer requires a `.env` file if environment variables are passed directly to the container. This enables deployment on platforms like Unraid, Portainer, and Kubernetes that inject env vars natively.
+
+---
+
 ## [1.8.7] - 2026-02-11
 
 ### Threat Watch v0.5.0

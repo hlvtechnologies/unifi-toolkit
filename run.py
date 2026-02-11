@@ -9,32 +9,25 @@ import os
 import sys
 from pathlib import Path
 
-# Check if .env file exists
+# Load environment variables from .env file if it exists
 env_file = Path(__file__).parent / ".env"
-if not env_file.exists():
+if env_file.exists():
+    try:
+        from dotenv import load_dotenv
+        load_dotenv(env_file)
+    except ImportError:
+        print("WARNING: python-dotenv not installed, .env file will not be loaded")
+        print("Install it with: pip install python-dotenv")
+elif not os.getenv("ENCRYPTION_KEY"):
     print("=" * 70)
-    print("ERROR: .env file not found!")
+    print("ERROR: No .env file found and ENCRYPTION_KEY not set!")
     print("=" * 70)
     print()
-    print("Please create a .env file in the project root directory.")
-    print("You can copy .env.example as a starting point:")
-    print()
-    print("  cp .env.example .env")
-    print()
-    print("Then edit .env and set the required values:")
-    print("  - ENCRYPTION_KEY (required)")
-    print("  - UniFi controller settings (optional, can configure via web UI)")
+    print("Either create a .env file (cp .env.example .env)")
+    print("or pass environment variables directly to the container.")
     print()
     print("=" * 70)
     sys.exit(1)
-
-# Load environment variables from .env file
-try:
-    from dotenv import load_dotenv
-    load_dotenv(env_file)
-except ImportError:
-    print("WARNING: python-dotenv not installed, .env file will not be loaded")
-    print("Install it with: pip install python-dotenv")
 
 # Check for required environment variables
 encryption_key = os.getenv("ENCRYPTION_KEY")
