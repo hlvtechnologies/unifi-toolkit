@@ -422,7 +422,7 @@ EOF
 
     # Set proper permissions for Docker (UID 1000 matches toolkit user in container)
     if command -v docker &> /dev/null; then
-        chmod 777 data 2>/dev/null || true
+        chown 1000:1000 data 2>/dev/null || chmod 755 data 2>/dev/null || true
         print_success "Set data directory permissions for Docker"
     fi
 
