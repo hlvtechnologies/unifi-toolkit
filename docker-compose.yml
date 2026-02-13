@@ -28,6 +28,8 @@ services:
       - STALKER_REFRESH_INTERVAL=${STALKER_REFRESH_INTERVAL:-60}
     volumes:
       # Persist database and data
+      # IMPORTANT: Create this directory on the host first with correct permissions:
+      #   mkdir -p ./data && chown 1000:1000 ./data
       - ./data:/app/data
       # Mount .env file for configuration
       - ./.env:/app/.env:ro

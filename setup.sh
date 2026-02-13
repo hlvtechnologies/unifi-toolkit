@@ -418,13 +418,17 @@ EOF
     if [ ! -d "data" ]; then
         mkdir -p data
         print_success "Created data directory"
+    else
+        print_success "Data directory already exists"
     fi
 
     # Set proper permissions for Docker (UID 1000 matches toolkit user in container)
     if command -v docker &> /dev/null; then
         chown 1000:1000 data 2>/dev/null || chmod 755 data 2>/dev/null || true
-        print_success "Set data directory permissions for Docker"
+        print_success "Set data directory permissions for Docker (UID 1000)"
     fi
+    print_info "The data/ directory stores the SQLite database. The container"
+    print_info "needs write access to /app/data (mapped from ./data on the host)."
 
     # Final instructions
     echo ""

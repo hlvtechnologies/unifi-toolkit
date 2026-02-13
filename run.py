@@ -48,6 +48,63 @@ if not encryption_key:
     print("=" * 70)
     sys.exit(1)
 
+# Check that the data directory exists and is writable before doing anything else
+def check_data_directory():
+    """Verify the data directory is usable before starting."""
+    db_url = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./data/unifi_toolkit.db")
+    if not db_url.startswith("sqlite"):
+        return  # Only relevant for SQLite
+
+    db_path = Path(db_url.split("///")[-1])
+    data_dir = db_path.parent
+
+    # Try to create the directory if it doesn't exist
+    try:
+        data_dir.mkdir(parents=True, exist_ok=True)
+    except PermissionError:
+        print("=" * 70)
+        print("ERROR: Cannot create data directory!")
+        print("=" * 70)
+        print()
+        print(f"  Path: {data_dir.resolve()}")
+        print()
+        print("The data directory does not exist and cannot be created.")
+        print("Fix this by creating it on the host before starting the container:")
+        print()
+        print("  mkdir -p ./data")
+        print("  chown 1000:1000 ./data")
+        print()
+        print("=" * 70)
+        sys.exit(1)
+
+    # Check if the directory is writable
+    test_file = data_dir / ".write_test"
+    try:
+        test_file.touch()
+        test_file.unlink()
+    except (PermissionError, OSError):
+        print("=" * 70)
+        print("ERROR: Data directory is not writable!")
+        print("=" * 70)
+        print()
+        print(f"  Path: {data_dir.resolve()}")
+        print()
+        print("The application needs write access to store its database.")
+        print("Fix this by updating permissions on the host:")
+        print()
+        print("  chown 1000:1000 ./data")
+        print()
+        print("Or if using a container manager (Portainer, Synology, TrueNAS, etc.),")
+        print("make sure the volume mount for /app/data has write permissions for")
+        print("UID 1000.")
+        print()
+        print("=" * 70)
+        sys.exit(1)
+
+
+check_data_directory()
+
+
 # Run database migrations before starting the app
 # This runs in a normal synchronous context, avoiding any async/uvicorn complications
 def run_migrations():

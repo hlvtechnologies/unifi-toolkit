@@ -26,12 +26,19 @@ class Database:
         """
         settings = get_settings()
 
-        # Ensure data directory exists (for SQLite database)
+        # Ensure data directory exists and is writable (for SQLite database)
         if settings.database_url.startswith("sqlite"):
             # Extract path from database URL (e.g., sqlite+aiosqlite:///./data/db.db)
             db_path = settings.database_url.split("///")[-1]
             db_dir = Path(db_path).parent
-            db_dir.mkdir(parents=True, exist_ok=True)
+            try:
+                db_dir.mkdir(parents=True, exist_ok=True)
+            except PermissionError:
+                logger.error(
+                    f"Cannot create data directory: {db_dir.resolve()}. "
+                    f"Create it on the host with: mkdir -p ./data && chown 1000:1000 ./data"
+                )
+                raise
             logger.info(f"Ensured data directory exists: {db_dir}")
 
         # Create async engine
