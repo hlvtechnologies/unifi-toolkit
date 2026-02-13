@@ -259,7 +259,7 @@ async def get_stats(
 
 @router.get("/timeline", response_model=ThreatTimelineResponse)
 async def get_timeline(
-    interval: str = Query("hour", regex="^(hour|day)$", description="Time interval (hour or day)"),
+    interval: str = Query("hour", pattern="^(hour|day)$", description="Time interval (hour or day)"),
     days: int = Query(7, ge=1, le=30, description="Number of days to include"),
     db: AsyncSession = Depends(get_db_session)
 ):

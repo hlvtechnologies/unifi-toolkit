@@ -253,7 +253,7 @@ class UniFiClient:
 
             # UniFi OS endpoint not found (404) - try legacy controller
             logger.debug("UniFi OS endpoint not found, trying legacy controller...")
-            legacy_result = await self._try_legacy_login(ssl_context)
+            legacy_result = await self._try_legacy_login(ssl_param)
 
             if legacy_result:
                 self.is_unifi_os = False
@@ -339,7 +339,7 @@ class UniFiClient:
             logger.debug(f"UniFi OS connection error: {e}")
             return "not_found"
 
-    async def _try_legacy_login(self, ssl_context) -> bool:
+    async def _try_legacy_login(self, ssl_param) -> bool:
         """Try to login via legacy controller (aiounifi)."""
         try:
             # Parse host and port from URL
@@ -349,7 +349,7 @@ class UniFiClient:
 
             logger.debug(f"Using legacy controller mode - host: {host}, port: {port}")
 
-            # Create Configuration object (aiounifi v85+ API)
+            # ssl_param: False = skip verification (self-signed certs), None = default
             config = Configuration(
                 session=self._session,
                 host=host,
@@ -357,7 +357,7 @@ class UniFiClient:
                 password=self.password,
                 port=port,
                 site=self.site,
-                ssl_context=ssl_context if ssl_context else False
+                ssl_context=ssl_param if ssl_param is not None else False
             )
 
             self.controller = Controller(config)

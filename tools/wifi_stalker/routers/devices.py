@@ -560,7 +560,7 @@ async def export_device_history(
 @router.get("/{device_id}/analytics/dwell-time", response_model=DwellTimeResponse)
 async def get_dwell_time(
     device_id: int,
-    window: str = Query(default="7d", regex="^(24h|7d|30d|all)$"),
+    window: str = Query(default="7d", pattern="^(24h|7d|30d|all)$"),
     db: AsyncSession = Depends(get_db_session)
 ):
     """
