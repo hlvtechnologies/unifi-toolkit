@@ -2,6 +2,40 @@
 
 All notable changes to UI Toolkit will be documented in this file.
 
+## [1.9.3] - 2026-02-13
+
+### Fixed
+- **Footer version display** - The `app/__init__.py` version string was never updated past 1.8.9, causing the footer on all pages to show v1.8.9 regardless of the actual running version. This led to incorrect troubleshooting advice telling users they were on an old image when they were actually up to date. (#26, #35)
+
+---
+
+## [1.9.2] - 2026-02-12
+
+### Fixed
+- **Legacy controller SSL regression** - v1.9.1 removed the `ssl_context` variable but left a reference to it in the legacy controller login path, causing a NameError that broke all legacy controller connections. (#26)
+- **FastAPI deprecation warnings** - `Query(regex=...)` deprecated in favor of `Query(pattern=...)`. (#32)
+
+---
+
+## [1.9.1] - 2026-02-12
+
+### Fixed
+- **SSL verification for self-signed certs** - Replaced custom `ssl.create_default_context()` with aiohttp's built-in `ssl=False` for more reliable self-signed cert handling on legacy controllers. (#26)
+
+---
+
+## [1.9.0] - 2026-02-12
+
+### Fixed
+- **UDR7 IDS/IPS detection** - The Dream Router 7 reports model code `UDMA67A` via the API, not `UDR7`. Added the correct model code to the supported models list. (#21)
+- **verify_ssl database default** - SQLAlchemy default was `True` but Pydantic default was `False`. Changed DB default to `False` since most UniFi deployments use self-signed certs. (#26)
+
+### Added
+- **U7 Pro XGS device name** - Added model code `UAPA6A4` to the friendly name map so it displays correctly in Network Pulse. (#28)
+- **QNAP deployment guide** - Linked community-contributed QNAP Container Station guide in README and installation docs. (#29)
+
+---
+
 ## [1.8.9] - 2026-02-11
 
 ### Fixed
