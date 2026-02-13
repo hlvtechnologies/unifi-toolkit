@@ -34,7 +34,7 @@ services:
       # Mount .env file for configuration
       - ./.env:/app/.env:ro
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD-SHELL", "curl -f http://localhost:${APP_PORT:-8000}/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -44,7 +44,7 @@ services:
     # In local mode, expose port directly
     # In production mode, Caddy handles external access
     ports:
-      - "${APP_PORT:-8000}:8000"
+      - "${APP_PORT:-8000}:${APP_PORT:-8000}"
 
   # Caddy reverse proxy with automatic HTTPS
   # Only runs when using production profile: docker-compose --profile production up
