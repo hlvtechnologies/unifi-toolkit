@@ -1424,13 +1424,17 @@ class UniFiClient:
 
                     # Look for gateway device types
                     # Prioritize dedicated gateways (ugw, udm, uxg) over UniFi Express (ux)
-                    # because Express can be either a standalone gateway OR just a mesh AP
+                    # because Express can be either a standalone gateway OR just a mesh AP.
+                    # Note: UniFi Express sometimes reports type 'udm' instead of 'ux',
+                    # so we also detect Express by model code.
+                    EXPRESS_MODEL_CODES = {'UX', 'UXBSDM'}
                     express_device = None
                     for device in devices:
                         device_type = device.get('type', '')
-                        if device_type in ('ugw', 'udm', 'uxg'):
+                        model_code = device.get('model', '').upper()
+                        is_express = device_type == 'ux' or model_code in EXPRESS_MODEL_CODES
+                        if device_type in ('ugw', 'udm', 'uxg') and not is_express:
                             # Dedicated gateway — always use this
-                            model_code = device.get('model', '').upper()
                             result["has_gateway"] = True
                             result["gateway_model"] = model_code
                             result["gateway_name"] = device.get('name') or get_friendly_model_name(model_code)
@@ -1441,7 +1445,7 @@ class UniFiClient:
                                 f"IDS/IPS: {result['supports_ids_ips']}"
                             )
                             return result
-                        elif device_type == 'ux' and express_device is None:
+                        elif is_express and express_device is None:
                             # UniFi Express — save as fallback in case no dedicated gateway exists
                             express_device = device
 
