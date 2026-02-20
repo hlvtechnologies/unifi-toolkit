@@ -16,18 +16,10 @@
         health_timeout 5s
     }
 
-    # Security headers
+    # Caddy-specific headers (security headers are set by the app)
     header {
-        # HSTS - tell browsers to always use HTTPS
+        # HSTS - tell browsers to always use HTTPS (requires Caddy's TLS)
         Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
-        # Prevent MIME type sniffing
-        X-Content-Type-Options "nosniff"
-        # Prevent clickjacking
-        X-Frame-Options "SAMEORIGIN"
-        # XSS protection
-        X-XSS-Protection "1; mode=block"
-        # Referrer policy
-        Referrer-Policy "strict-origin-when-cross-origin"
         # Remove server header
         -Server
     }
