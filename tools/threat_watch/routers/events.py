@@ -4,7 +4,7 @@ API routes for threat events
 import logging
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, desc, and_, or_
+from sqlalchemy import select, func, asc, desc, and_, or_
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 
@@ -47,6 +47,8 @@ async def get_events(
     dest_ip: Optional[str] = Query(None, description="Filter by destination IP"),
     search: Optional[str] = Query(None, description="Search in signature/message"),
     include_ignored: bool = Query(False, description="Include events that match ignore rules"),
+    sort: Optional[str] = Query(None, description="Column to sort by"),
+    sort_direction: Optional[str] = Query(None, pattern="^(asc|desc)$", description="Sort direction (asc or desc)"),
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(50, ge=1, le=500, description="Events per page"),
     db: AsyncSession = Depends(get_db_session)
@@ -94,9 +96,22 @@ async def get_events(
     total_result = await db.execute(count_query)
     total = total_result.scalar()
 
+    # Apply sorting
+    sortable_columns = {
+        'timestamp': ThreatEvent.timestamp,
+        'severity': ThreatEvent.severity,
+        'action': ThreatEvent.action,
+        'category': ThreatEvent.category,
+        'src_ip': ThreatEvent.src_ip,
+        'dest_ip': ThreatEvent.dest_ip,
+        'signature': ThreatEvent.signature,
+    }
+    sort_col = sortable_columns.get(sort, ThreatEvent.timestamp)
+    sort_fn = asc if sort_direction == 'asc' else desc
+
     # Apply pagination and ordering
     offset = (page - 1) * page_size
-    query = query.order_by(desc(ThreatEvent.timestamp)).offset(offset).limit(page_size)
+    query = query.order_by(sort_fn(sort_col)).offset(offset).limit(page_size)
 
     # Execute query
     result = await db.execute(query)

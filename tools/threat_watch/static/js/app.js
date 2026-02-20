@@ -144,6 +144,8 @@ function dashboard() {
                 if (this.filters.category) params.append('category', this.filters.category);
                 if (this.filters.search) params.append('search', this.filters.search);
                 if (this.filters.includeIgnored) params.append('include_ignored', 'true');
+                if (this.sortColumn) params.append('sort', this.sortColumn);
+                if (this.sortDirection) params.append('sort_direction', this.sortDirection);
 
                 const response = await fetch(`/threats/api/events?${params}`);
                 if (response.ok) {
@@ -530,7 +532,6 @@ function dashboard() {
                 this.sortColumn = column;
                 this.sortDirection = 'desc';
             }
-            // Note: Server-side sorting would be implemented here
             this.loadEvents();
         },
 
