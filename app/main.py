@@ -168,7 +168,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="UI Toolkit",
     description="Comprehensive toolkit for UniFi network management and monitoring",
-    version="1.9.10",
+    version="1.9.11",
     lifespan=lifespan
 )
 
