@@ -122,18 +122,12 @@
                                 <span>WAN IP</span>
                                 <span id="wan-ip" class="wan-ip-hidden" title="Click to reveal" data-revealed="false">--</span>
                             </div>
-                            <div class="detail-row" id="wan2-row" style="display: none;">
-                                <span>WAN2 IP</span>
-                                <span id="wan2-ip" class="wan-ip-hidden" title="Click to reveal" data-revealed="false">--</span>
-                            </div>
+                            <div id="extra-wan-ip-rows"></div>
                             <div class="detail-row">
                                 <span>WAN Uptime</span>
                                 <span id="wan-availability">--</span>
                             </div>
-                            <div class="detail-row" id="wan2-availability-row" style="display: none;">
-                                <span>WAN2 Uptime</span>
-                                <span id="wan2-availability">--</span>
-                            </div>
+                            <div id="extra-wan-uptime-rows"></div>
                         </div>
                     </div>
                     <!-- Internet Stats -->
@@ -165,13 +159,7 @@
                                 </span>
                                 <span class="health-badge" id="wan-health">--</span>
                             </div>
-                            <div class="detail-row" id="wan2-health-row" style="display: none;">
-                                <span class="health-label-group">
-                                    <span>WAN2</span>
-                                    <span class="health-reason" id="wan2-reason"></span>
-                                </span>
-                                <span class="health-badge" id="wan2-health">--</span>
-                            </div>
+                            <div id="extra-wan-health-rows"></div>
                             <div class="detail-row">
                                 <span class="health-label-group">
                                     <span>LAN</span>
@@ -594,7 +582,103 @@
             }
 
             setupWanIpToggle('wan-ip');
-            setupWanIpToggle('wan2-ip');
+
+            // Render extra WAN interfaces (wan2, wan3, etc.) dynamically
+            function renderExtraWans(health) {
+                const extraWanKeys = Object.keys(health)
+                    .filter(key => key.startsWith('wan') && key !== 'wan')
+                    .sort((a, b) => {
+                        const numA = parseInt(a.replace('wan', '') || '1');
+                        const numB = parseInt(b.replace('wan', '') || '1');
+                        return numA - numB;
+                    });
+
+                const ipContainer = document.getElementById('extra-wan-ip-rows');
+                const uptimeContainer = document.getElementById('extra-wan-uptime-rows');
+                const healthContainer = document.getElementById('extra-wan-health-rows');
+                ipContainer.innerHTML = '';
+                uptimeContainer.innerHTML = '';
+                healthContainer.innerHTML = '';
+
+                extraWanKeys.forEach(wanKey => {
+                    const wanData = health[wanKey];
+                    const label = wanKey.toUpperCase();
+
+                    // IP row (click to reveal)
+                    const ipRow = document.createElement('div');
+                    ipRow.className = 'detail-row';
+                    const ipLabel = document.createElement('span');
+                    ipLabel.textContent = label + ' IP';
+                    const ipValue = document.createElement('span');
+                    ipValue.className = 'wan-ip-hidden';
+                    ipValue.title = 'Click to reveal';
+                    ipValue.dataset.revealed = 'false';
+                    const ip = wanData.wan_ip || '--';
+                    ipValue.dataset.ip = ip;
+                    ipValue.textContent = ip === '--' ? '--' : '(click to show)';
+                    ipValue.addEventListener('click', function() {
+                        const ipAddr = this.dataset.ip;
+                        if (!ipAddr || ipAddr === '--') return;
+                        if (this.dataset.revealed === 'true') {
+                            this.textContent = '(click to show)';
+                            this.dataset.revealed = 'false';
+                            this.title = 'Click to reveal';
+                        } else {
+                            this.textContent = ipAddr;
+                            this.dataset.revealed = 'true';
+                            this.title = 'Click to hide';
+                        }
+                    });
+                    ipRow.appendChild(ipLabel);
+                    ipRow.appendChild(ipValue);
+                    ipContainer.appendChild(ipRow);
+
+                    // Uptime/availability row
+                    const uptimeRow = document.createElement('div');
+                    uptimeRow.className = 'detail-row';
+                    const uptimeLabel = document.createElement('span');
+                    uptimeLabel.textContent = label + ' Uptime';
+                    const uptimeValue = document.createElement('span');
+                    const avail = wanData.availability;
+                    uptimeValue.textContent = avail ? `${avail.toFixed(2)}%` : '--';
+                    uptimeRow.appendChild(uptimeLabel);
+                    uptimeRow.appendChild(uptimeValue);
+                    uptimeContainer.appendChild(uptimeRow);
+
+                    // Health badge row
+                    const healthRow = document.createElement('div');
+                    healthRow.className = 'detail-row';
+                    const healthLabelGroup = document.createElement('span');
+                    healthLabelGroup.className = 'health-label-group';
+                    const healthLabel = document.createElement('span');
+                    healthLabel.textContent = label;
+                    const healthReason = document.createElement('span');
+                    healthReason.className = 'health-reason';
+                    if (wanData.status_reason) {
+                        healthReason.textContent = wanData.status_reason;
+                    }
+                    healthLabelGroup.appendChild(healthLabel);
+                    healthLabelGroup.appendChild(healthReason);
+                    const healthBadge = document.createElement('span');
+                    healthBadge.className = 'health-badge';
+                    const status = wanData.status;
+                    if (status === 'ok') {
+                        healthBadge.classList.add('ok');
+                        healthBadge.textContent = 'OK';
+                    } else if (status === 'warning') {
+                        healthBadge.classList.add('warning');
+                        healthBadge.textContent = 'WARN';
+                    } else if (status === 'error' || status === 'unknown') {
+                        healthBadge.classList.add('error');
+                        healthBadge.textContent = status === 'unknown' ? 'N/A' : 'ERR';
+                    } else {
+                        healthBadge.textContent = status || '--';
+                    }
+                    healthRow.appendChild(healthLabelGroup);
+                    healthRow.appendChild(healthBadge);
+                    healthContainer.appendChild(healthRow);
+                });
+            }
 
             // Load system status
             async function loadSystemStatus() {
@@ -660,22 +744,8 @@
                     const wanAvail = health.wan?.availability;
                     document.getElementById('wan-availability').textContent = wanAvail ? `${wanAvail.toFixed(2)}%` : '--';
 
-                    // Check for WAN2 (multi-WAN)
-                    if (health.wan2) {
-                        document.getElementById('wan2-row').style.display = 'flex';
-                        document.getElementById('wan2-availability-row').style.display = 'flex';
-                        // Store WAN2 IP and show obfuscated by default
-                        const wan2IpEl = document.getElementById('wan2-ip');
-                        const wan2Ip = health.wan2.wan_ip || '--';
-                        wan2IpEl.dataset.ip = wan2Ip;
-                        wan2IpEl.textContent = wan2Ip === '--' ? '--' : '(click to show)';
-                        wan2IpEl.dataset.revealed = 'false';
-                        const wan2Avail = health.wan2.availability;
-                        document.getElementById('wan2-availability').textContent = wan2Avail ? `${wan2Avail.toFixed(2)}%` : '--';
-                    } else {
-                        document.getElementById('wan2-row').style.display = 'none';
-                        document.getElementById('wan2-availability-row').style.display = 'none';
-                    }
+                    // Render extra WANs (wan2, wan3, etc.) dynamically
+                    renderExtraWans(health);
 
                     // Internet stats from www health
                     const wwwLatency = health.www?.latency;
@@ -687,14 +757,6 @@
                     setHealthBadge('wan-health', health.wan?.status, health.wan?.status_reason);
                     setHealthBadge('lan-health', health.lan?.status, health.lan?.status_reason);
                     setHealthBadge('wlan-health', health.wlan?.status, health.wlan?.status_reason);
-
-                    // WAN2 health (multi-WAN)
-                    if (health.wan2) {
-                        document.getElementById('wan2-health-row').style.display = 'flex';
-                        setHealthBadge('wan2-health', health.wan2.status, health.wan2.status_reason);
-                    } else {
-                        document.getElementById('wan2-health-row').style.display = 'none';
-                    }
 
                     // VPN health - only show if configured (not in error state with "not configured")
                     if (health.vpn && !(health.vpn.status === 'error' && health.vpn.status_reason === 'not configured')) {

@@ -77,7 +77,7 @@ class TopClient(BaseModel):
 class NetworkHealth(BaseModel):
     """Network subsystem health"""
     wan: Optional[dict] = None
-    wan2: Optional[dict] = None
+    extra_wans: Dict[str, dict] = Field(default_factory=dict)
     lan: Optional[dict] = None
     wlan: Optional[dict] = None
     vpn: Optional[dict] = None

@@ -1261,15 +1261,15 @@ class UniFiClient:
                                 'latency': item.get('latency') if subsystem == 'www' else None,
                             }
 
-                            # WAN-specific fields
-                            if subsystem in ('wan', 'wan2'):
+                            # WAN-specific fields (wan, wan2, wan3, etc.)
+                            if subsystem.startswith('wan'):
                                 health[subsystem]['wan_ip'] = item.get('wan_ip')
                                 health[subsystem]['isp_name'] = item.get('isp_name')
                                 health[subsystem]['gw_name'] = item.get('gw_name')
 
                                 # Extract uptime stats (availability, latency)
                                 uptime_stats = item.get('uptime_stats', {})
-                                wan_key = 'WAN' if subsystem == 'wan' else 'WAN2'
+                                wan_key = subsystem.upper()
                                 wan_stats = uptime_stats.get(wan_key, {})
                                 health[subsystem]['availability'] = wan_stats.get('availability')
                                 health[subsystem]['latency_avg'] = wan_stats.get('latency_average')
@@ -1299,12 +1299,12 @@ class UniFiClient:
                                     reasons.append("not configured")
 
                                 # WAN-specific issues
-                                if subsystem in ('wan', 'wan2'):
+                                if subsystem.startswith('wan'):
                                     if not item.get('wan_ip'):
                                         reasons.append("no IP assigned")
                                     # Check for high latency or low availability
                                     uptime_stats = item.get('uptime_stats', {})
-                                    wan_key = 'WAN' if subsystem == 'wan' else 'WAN2'
+                                    wan_key = subsystem.upper()
                                     wan_stats = uptime_stats.get(wan_key, {})
                                     availability = wan_stats.get('availability', 100)
                                     if availability < 99:

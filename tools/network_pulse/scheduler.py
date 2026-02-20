@@ -253,9 +253,10 @@ async def refresh_network_stats():
         )
 
         # Network health
+        extra_wans = {k: v for k, v in health.items() if k.startswith('wan') and k != 'wan'}
         network_health = NetworkHealth(
             wan=health.get('wan'),
-            wan2=health.get('wan2'),
+            extra_wans=extra_wans,
             lan=health.get('lan'),
             wlan=health.get('wlan'),
             vpn=health.get('vpn'),

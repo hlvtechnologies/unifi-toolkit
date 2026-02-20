@@ -213,13 +213,15 @@
                                 <span x-text="(data.health?.wan?.status || 'unknown').toUpperCase()"></span>
                             </span>
                         </div>
-                        <div class="health-row" x-show="data.health?.wan2">
-                            <span class="health-label">WAN2</span>
-                            <span class="health-status" :class="'status-' + (data.health?.wan2?.status || 'unknown')">
-                                <span x-text="getStatusEmoji(data.health?.wan2?.status)"></span>
-                                <span x-text="(data.health?.wan2?.status || 'unknown').toUpperCase()"></span>
-                            </span>
-                        </div>
+                        <template x-for="[wanKey, wanData] in Object.entries(data.health?.extra_wans || {})" :key="wanKey">
+                            <div class="health-row">
+                                <span class="health-label" x-text="wanKey.toUpperCase()"></span>
+                                <span class="health-status" :class="'status-' + (wanData?.status || 'unknown')">
+                                    <span x-text="getStatusEmoji(wanData?.status)"></span>
+                                    <span x-text="(wanData?.status || 'unknown').toUpperCase()"></span>
+                                </span>
+                            </div>
+                        </template>
                         <div class="health-row" x-show="data.health?.lan">
                             <span class="health-label">LAN</span>
                             <span class="health-status" :class="'status-' + (data.health?.lan?.status || 'unknown')">
