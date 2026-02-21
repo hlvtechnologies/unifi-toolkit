@@ -13,7 +13,7 @@ from urllib.parse import urlparse
 logger = logging.getLogger(__name__)
 
 # Gateway models that support IDS/IPS
-# UniFi Express (UX, UXBSDM) does NOT support IDS/IPS
+# UniFi Express (UX, UXBSDM) does NOT support IDS/IPS — but Express 7 (UX7) DOES
 IDS_IPS_SUPPORTED_MODELS = {
     # Dream Machine series
     "UDM",          # UDM (base)
@@ -35,6 +35,8 @@ IDS_IPS_SUPPORTED_MODELS = {
     "UCGMAX",       # UCG Max
     "UDMA6A8",      # UCG Fiber
     "UDRULT",       # UCG Ultra
+    # UniFi Express 7 (supports IDS/IPS unlike original Express)
+    "UX7",          # UniFi Express 7
     # USG series (Security Gateway - legacy)
     "USG",          # USG (base)
     "USG3P",        # USG 3P
@@ -77,9 +79,10 @@ UNIFI_MODEL_NAMES = {
     "USGP4": "USG Pro 4",
     "UGWHD4": "USG HD",
     "UGWXG": "USG XG 8",
-    # UniFi Express (no IDS/IPS)
+    # UniFi Express
     "UX": "UniFi Express",
     "UXBSDM": "UniFi Express",
+    "UX7": "UniFi Express 7",
     # Access Points
     "U7PROMAX": "U7 Pro Max",
     "UAPA6A4": "U7 Pro XGS",
@@ -1427,7 +1430,7 @@ class UniFiClient:
                     # because Express can be either a standalone gateway OR just a mesh AP.
                     # Note: UniFi Express sometimes reports type 'udm' instead of 'ux',
                     # so we also detect Express by model code.
-                    EXPRESS_MODEL_CODES = {'UX', 'UXBSDM'}
+                    EXPRESS_MODEL_CODES = {'UX', 'UXBSDM', 'UX7'}
                     express_device = None
                     for device in devices:
                         device_type = device.get('type', '')
