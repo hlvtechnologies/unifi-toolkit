@@ -535,7 +535,12 @@ async def debug_test_fetch(
         # Test v2 traffic-flows API (Network 10.x+)
         if client.is_unifi_os:
             try:
-                v2_events = await client.get_traffic_flows(limit=10, time_range="24h")
+                v2_events = await client.get_traffic_flows(
+                    timestamp_from=day_ago_ms,
+                    timestamp_to=now_ms,
+                    page_size=25,
+                    max_events=25
+                )
             except Exception as e:
                 v2_error = str(e)
 
@@ -584,6 +589,7 @@ async def debug_test_fetch(
                     "available": client.is_unifi_os,
                     "events_returned": len(v2_events),
                     "error": v2_error,
+                    "payload_format": "v2_filtered" if client._v2_uses_new_payload else "legacy_pagination" if client._v2_uses_new_payload is False else "unknown",
                     "sample_event_keys": list(v2_events[0].keys()) if v2_events else None,
                     "sample_event": v2_events[0] if v2_events else None,
                     "endpoint": "/proxy/network/v2/api/site/{site}/traffic-flows"
