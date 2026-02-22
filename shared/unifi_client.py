@@ -459,6 +459,7 @@ class UniFiClient:
                                 'ip': client.get('ip'),
                                 'last_seen': client.get('last_seen'),
                                 'rssi': client.get('rssi'),
+                                'signal': client.get('signal'),
                                 'hostname': client.get('hostname'),
                                 'name': client.get('name'),
                                 'oui': client.get('oui'),  # Manufacturer from UniFi
@@ -510,6 +511,7 @@ class UniFiClient:
                             'ip': client.get('ip'),
                             'last_seen': client.get('last_seen'),
                             'rssi': client.get('rssi'),
+                            'signal': client.get('signal'),
                             'hostname': client.get('hostname'),
                             'name': client.get('name'),
                             'oui': client.get('oui'),
@@ -1793,7 +1795,7 @@ class UniFiClient:
                     'rx_bytes': rx_bytes,
                     'total_bytes': total_bytes,
                     'rssi': client.get('rssi'),
-                    'signal': client.get('rssi'),  # alias for convenience
+                    'signal': client.get('signal') or client.get('rssi'),
                     'is_wired': client.get('is_wired', False),
                     'ap_mac': client.get('ap_mac'),
                     'uptime': client.get('uptime'),
