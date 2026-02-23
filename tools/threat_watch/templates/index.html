@@ -156,6 +156,11 @@
 
                 <!-- Filter Bar -->
                 <div class="filter-bar">
+                    <select x-model="filters.timeRange" @change="loadEvents(); loadStats()">
+                        <option value="24h">Last 24 Hours</option>
+                        <option value="7d">Last 7 Days</option>
+                        <option value="30d">Last 30 Days</option>
+                    </select>
                     <select x-model="filters.severity" @change="loadEvents()">
                         <option value="">All Severities</option>
                         <option value="1">High</option>
